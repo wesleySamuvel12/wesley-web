@@ -37,6 +37,24 @@ export const WEB_PRODUCTS: WebProduct[] = [
     ],
   },
   {
+    id: 'fdppro',
+    title: 'FDP PRO · EVENT SITE',
+    tagline: '7-DAY ONLINE FDP — NIET MATHEMATICS DEPT.',
+    description:
+      'A complete event platform designed and built for the Department of Mathematics, NIET — a 7-day online Faculty Development Programme on advanced applications of mathematics in engineering systems, machine learning and scientific research, with schedule, speakers, topics, committee and free registration flows.',
+    url: 'https://fdppro.netlify.app/',
+    domain: 'fdppro.netlify.app',
+    stack: ['HTML5', 'CSS3', 'VANILLA JS', 'NETLIFY'],
+    image: '/images/web/fdppro.png',
+    accent: '#a78bfa',
+    category: 'EVENT WEB PLATFORM',
+    highlights: [
+      { label: 'PROGRAM DAYS', value: '7' },
+      { label: 'PARTICIPANTS', value: '394+' },
+      { label: 'STATUS', value: 'DEPLOYED' },
+    ],
+  },
+  {
     id: 'msproject',
     title: 'MS PROJECT CLONE',
     tagline: 'PROFESSIONAL PROJECT SCHEDULING, REBUILT FOR WEB',

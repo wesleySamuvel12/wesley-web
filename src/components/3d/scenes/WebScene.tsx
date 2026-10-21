@@ -147,7 +147,7 @@ function BrowserWindow({ product, index }: { product: WebProduct; index: number 
   )
 }
 
-/** SCENE 07 — Live web products: two real deployed sites in floating browser windows */
+/** SCENE 07 — Live web products: three real deployed sites in floating browser windows */
 export default function WebScene() {
   const group = useSceneVisibility(IDX)
   const glowA = useMemo(() => createGlowTexture('rgba(103,232,249,1)'), [])
@@ -170,6 +170,7 @@ export default function WebScene() {
       <spotLight position={[0, 3.6, 4.6]} angle={0.7} penumbra={1} intensity={42} color="#dfeaf2" distance={16} decay={2} />
       <pointLight position={[-4.2, 0.6, -2]} intensity={9} color="#67e8f9" distance={12} decay={2} />
       <pointLight position={[4.2, 0.5, -2]} intensity={9} color="#bef264" distance={12} decay={2} />
+      <pointLight position={[0, 1.9, -3.4]} intensity={7} color="#a78bfa" distance={12} decay={2} />
       <ambientLight intensity={0.24} />
     </group>
   )

@@ -9,7 +9,9 @@ import { useSceneVisibility } from '../shared/visibility'
 import { Label3D, GlowSprite } from '../shared/Label3D'
 import ParticleField from '../shared/ParticleField'
 import { PROJECTS } from '@/data/projects'
+import { isRealUrl } from '@/data/web'
 import { createGlowTexture, createGridTexture } from '@/lib/textures'
+import { useExperienceStore } from '@/lib/store'
 
 const IDX = SCENES.findIndex((s) => s.id === 'koottam')
 const project = PROJECTS.find((p) => p.id === 'koottam')
@@ -23,6 +25,7 @@ function FlowNode({ label, index }: { label: string; index: number }) {
   const baseX = NODE_X[index] ?? 0
   const baseY = NODE_Y[index] ?? 0
   const accent = index === 1 ? '#bef264' : index === 4 ? '#f5c86a' : '#5eead4'
+  const setCursor = useExperienceStore((s) => s.setCursor)
 
   useFrame((state) => {
     const g = ref.current
@@ -34,7 +37,23 @@ function FlowNode({ label, index }: { label: string; index: number }) {
   })
 
   return (
-    <group ref={ref} position={[baseX, baseY, 0]}>
+    <group
+      ref={ref}
+      position={[baseX, baseY, 0]}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        setCursor('view', 'OPEN LIVE SITE')
+      }}
+      onPointerOut={() => setCursor('default')}
+      onClick={(e) => {
+        e.stopPropagation()
+        // INSPECT = navigate: tapping a flow node opens the real deployed
+        // platform (kottamcart.vercel.app) in a new tab
+        const url = project?.demo
+        if (url && isRealUrl(url)) window.open(url, '_blank', 'noopener,noreferrer')
+        setCursor('default')
+      }}
+    >
       <RoundedBox args={[1.35, 0.52, 0.14]} radius={0.05} smoothness={4}>
         <meshPhysicalMaterial
           color="#0b0f14"
@@ -53,7 +72,7 @@ function FlowNode({ label, index }: { label: string; index: number }) {
       </mesh>
       <GlowSprite position={[0, 0, -0.2]} scale={1.5} color={accent} opacity={0.16} />
       <Label3D text={label} position={[0, 0.02, 0.09]} scale={0.17} accent={accent} />
-      <Label3D text={`NODE 0${index + 1}`} position={[0, -0.17, 0.09]} scale={0.075} mono opacity={0.6} />
+      <Label3D text={index === 0 ? 'LIVE · TAP TO OPEN' : `NODE 0${index + 1}`} position={[0, -0.17, 0.09]} scale={0.075} mono opacity={0.6} />
     </group>
   )
 }

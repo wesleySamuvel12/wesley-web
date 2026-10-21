@@ -166,3 +166,25 @@ Work Log:
 Stage Summary:
 - Mobile is now a first-class experience: same cinematic film, touch-native cursor language (reveal rig + named intro plate + tap-to-scan + tap-to-navigate), faster camera response, tighter pixel budgets, cheaper compositing, safe-area-aware frame, and a thumb-friendly scene badge for fast navigation.
 - Tuning surfaces: CustomCursor (touch spring rates, plate offset/threshold), CameraController isTouch lambdas, Stage MOBILE_DEVICE/TIER_DPR, scenes.ts (unchanged), TechScene 4s scan timer, TechOverlay/ContactOverlay mobile breakpoints, globals.css mobile media query.
+
+---
+Task ID: 15
+Agent: main (Z.ai Code)
+Task: Integrate two new live projects — Kottam Cart (kottamcart.vercel.app) + FDP Pro event site (fdppro.netlify.app)
+
+Work Log:
+- Verified both live sites via agent-browser: kottamcart.vercel.app ("Koottam Cart — AI Community Commerce Platform": AI Control Tower with 28 AI modules, 8 Tamil Nadu cities incl. Madurai/Chennai/Coimbatore, command palette) and fdppro.netlify.app ("7-Day Online FDP — NIET | Mathematics in Engineering & ML": NIET Mathematics Dept event site, 03–10 Aug 2026, Webex, free registration + e-certificate, hand-crafted HTML/CSS/vanilla JS on Netlify)
+- Captured REAL production screenshot of fdppro hero (1600×1000) via agent-browser → public/images/web/fdppro.png
+- data/web.ts: added third WebProduct 'fdppro' (title FDP PRO · EVENT SITE, category EVENT WEB PLATFORM, violet #a78bfa accent, real highlights 7 days / 394+ participants / DEPLOYED, stack HTML5/CSS3/VANILLA JS/NETLIFY) — inserted between iqac and msproject so index order matches composition
+- data/projects.ts: koottam demo placeholder → real https://kottamcart.vercel.app/ (activates VIEW CASE STUDY ↗ navigation via isRealUrl gate); description enriched with live facts (28 AI modules, 8 cities); stats → 28 AI MODULES / 8 CITIES / LIVE; features → AI CONTROL TOWER 28 MODULES, CITY NETWORK
+- webLayout.ts: WEB_DISPLAYS expanded to a 3-window triptych — IQAC left-near (-2.18, 0.3, 0.5, ry .26), FDP center-back-raised (0.06, 0.62, -1.15, ry .02), MS PROJECT right-high (2.3, 0.52, 0.05, ry -.26); getWebPose stand-off made depth-relative (d.z + 1.78) so every window zooms equally full-bleed regardless of resting depth; fixed MS caption/quick-link collision by raising right window (y -0.02 → 0.52)
+- WebScene.tsx: added violet rim pointLight (#a78bfa) for the new window's accent; comment updated to three sites
+- KoottamScene.tsx: flow nodes are now inspect-navigators — hover → cursor 'OPEN LIVE SITE', click/tap → window.open(demo) (isRealUrl-guarded); first node sublabel 'LIVE · TAP TO OPEN'
+- ProjectOverlay.tsx: live badge above flow chain — "● LIVE AT KOTTAMCART.VERCEL.APP — TAP A NODE ↗" (renders only when demo isRealUrl)
+- Verified end-to-end (agent-browser, desktop 1600×1000): triptych renders with correct screenshots + product index (3) + quick-links (3); FDP window click → new tab fdppro.netlify.app + focus zoom + DEPLOYED inspect card (7 days/394+/stack chips/AutoReturnBar/OPEN LIVE SITE) + auto-return at 7s (focusedWeb null); koottam WHATSAPP node click → new tab kottamcart.vercel.app; DOM anchor audit: all 4 real URLs present (kottamcart / iqac / fdppro / msproject); mobile 390×844: koottam badge + flow chain + web triptych with portrait compensation all correct; zero page errors
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only
+
+Stage Summary:
+- Portfolio now showcases 4 real deployed products: KOOTTAM CART (project scene + overlay + tappable 3D nodes), IQAC PORTAL, FDP PRO (new third browser window in WEB PRODUCTS scene), MS PROJECT CLONE — every inspect path navigates to its live URL (touch + mouse)
+- WEB scene is a 3-window cinematic triptych (left-near / center-back / right-high) with depth-relative focus zoom
+- Tuning surfaces: webLayout.ts poses/stand-off, data/web.ts, data/projects.ts koottam entry

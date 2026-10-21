@@ -80,6 +80,11 @@ export default function ProjectOverlay({ index, project }: ProjectOverlayProps) 
       {/* koottam data-flow chain */}
       {project.flow && (
         <div data-reveal className="absolute bottom-[5%] left-6 sm:left-12 md:left-16 lg:left-20">
+          {isRealUrl(project.demo) && (
+            <span className="mb-3 inline-block border border-white/10 bg-white/[0.04] px-2.5 py-1.5 font-mono text-[8px] tracking-[0.22em] text-[#f5c86a]">
+              ● LIVE AT {project.demo.replace(/^https?:\/\//i, '').replace(/\/$/, '').toUpperCase()} — TAP A NODE ↗
+            </span>
+          )}
           <div className="flex flex-col gap-0">
             {project.flow.map((step, i) => (
               <div key={step} className="flex items-center gap-3">
