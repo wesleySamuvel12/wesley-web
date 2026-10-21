@@ -57,9 +57,13 @@ export default function CameraController() {
     const aspect = size.width / Math.max(1, size.height)
     let targetFov = cfg.cam.from.fov + (cfg.cam.to.fov - cfg.cam.from.fov) * t
     if (aspect < 0.85) {
-      _targetPos.sub(_targetLook).multiplyScalar(1.62).add(_targetLook)
+      _targetPos.sub(_targetLook).multiplyScalar(1.52).add(_targetLook)
       targetFov += 10
     }
+
+    // touch devices scroll natively (instant) — the rig must keep up with
+    // that fast movement, so damping runs tighter than on desktop
+    const isTouch = useExperienceStore.getState().isTouch
 
     // scroll realism — the lens reacts to scroll speed like a physical rig:
     // a gentle FOV kick and a short dolly pull-back along the view axis
@@ -79,7 +83,7 @@ export default function CameraController() {
     } else if (st.focusedHardware && getHardwarePose(st.focusedHardware, _posePos, _poseLook)) {
       special = true
     }
-    focusAmt.current = THREE.MathUtils.damp(focusAmt.current, special ? 1 : 0, 3.4, delta)
+    focusAmt.current = THREE.MathUtils.damp(focusAmt.current, special ? 1 : 0, isTouch ? 4.6 : 3.4, delta)
     if (focusAmt.current > 0.001 && special) {
       _targetPos.lerp(_posePos, focusAmt.current)
       _targetLook.lerp(_poseLook, focusAmt.current)
@@ -103,7 +107,7 @@ export default function CameraController() {
     } else {
       // higher damping while inside the dip zone → the rig settles into the
       // new scene before the frame clears, so no residue is ever visible
-      const lambda = 2.6 + dip * 14
+      const lambda = (isTouch ? 3.8 : 2.6) + dip * 14
       damp3(curPos.current, _targetPos, lambda, delta)
       damp3(_curLook, _targetLook, lambda, delta)
     }

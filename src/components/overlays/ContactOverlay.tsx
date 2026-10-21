@@ -16,7 +16,7 @@ const FOOTER_LINKS = [
 export default function ContactOverlay() {
   return (
     <SceneOverlay index={14} className="flex items-center">
-      <div className="w-full px-6 pb-36 pt-6 sm:px-12 md:px-16 md:pb-40 lg:px-20">
+      <div className="w-full px-6 pb-44 pt-6 sm:px-12 sm:pb-36 md:px-16 md:pb-40 lg:px-20">
         <h2 className="font-display font-bold leading-[0.92] tracking-[-0.02em] text-white text-[clamp(2.8rem,8vw,7.8rem)]">
           <span data-reveal className="block">LET&apos;S BUILD</span>
           <span data-reveal className="block">SOMETHING</span>
@@ -57,7 +57,7 @@ export default function ContactOverlay() {
             <div className="font-display text-[10px] font-semibold tracking-[0.34em] text-white/85">
               WESLEY SAMUVEL
             </div>
-            <nav className="flex items-center gap-5" aria-label="Footer">
+            <nav className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Footer">
               {FOOTER_LINKS.map((l) => (
                 <button
                   key={l.label}
@@ -71,7 +71,7 @@ export default function ContactOverlay() {
               <a
                 href={`mailto:${CONTACT.email}`}
                 data-cursor="open"
-                className="font-mono text-[8px] tracking-[0.3em] text-white/40 transition-colors duration-300 hover:text-[#bef264]"
+                className="hidden font-mono text-[8px] tracking-[0.3em] text-white/40 transition-colors duration-300 hover:text-[#bef264] sm:inline"
               >
                 {CONTACT.email.toUpperCase()}
               </a>

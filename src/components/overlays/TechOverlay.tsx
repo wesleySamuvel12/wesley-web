@@ -8,6 +8,7 @@ import { useExperienceStore } from '@/lib/store'
 /** SCENE 05 — technology constellation HUD */
 export default function TechOverlay() {
   const hoveredTech = useExperienceStore((s) => s.hoveredTech)
+  const isTouch = useExperienceStore((s) => s.isTouch)
   const node = TECH_NODES.find((n) => n.id === hoveredTech) ?? null
 
   return (
@@ -20,7 +21,7 @@ export default function TechOverlay() {
           TECH<span className="text-[#67e8f9]">NOLOGY</span> CONSTELLATION
         </h2>
         <p data-reveal className="mt-4 font-mono text-[9px] tracking-[0.32em] text-white/40">
-          HOVER A NODE TO SCAN · SIGNALS TRAVEL THE LINKS
+          {isTouch ? 'TAP A NODE TO SCAN · SIGNALS TRAVEL THE LINKS' : 'HOVER A NODE TO SCAN · SIGNALS TRAVEL THE LINKS'}
         </p>
       </div>
 
@@ -37,8 +38,8 @@ export default function TechOverlay() {
         ))}
       </div>
 
-      {/* hover scan panel */}
-      <div data-reveal className="pointer-events-auto absolute right-6 top-[20%] w-[min(78vw,300px)] sm:right-12 md:right-16 lg:right-24">
+      {/* hover scan panel — sits low on phones so it never covers the headline */}
+      <div data-reveal className="pointer-events-auto absolute bottom-[6%] right-6 top-auto w-[min(78vw,300px)] sm:bottom-auto sm:right-12 sm:top-[20%] md:right-16 lg:right-24">
         {node ? (
           <GlassCard className="p-5" glowColor="rgba(103,232,249,0.12)">
             <div className="flex items-center justify-between">

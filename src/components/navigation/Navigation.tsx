@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { INDICATOR, SCENE_TO_INDICATOR } from '@/lib/scenes'
 import { subscribeScroll, scrollToScene } from '@/lib/scrollEngine'
 import { useExperienceStore } from '@/lib/store'
@@ -37,7 +37,7 @@ export function Navigation() {
       {/* left — monogram */}
       <button
         onClick={() => go(0)}
-        className="pointer-events-auto flex items-center gap-3"
+        className="pointer-events-auto -m-2 flex items-center gap-3 p-2"
         data-cursor="open"
         aria-label="Back to intro"
       >
@@ -80,11 +80,53 @@ export function Navigation() {
       <button
         onClick={() => go(14)}
         data-cursor="open"
-        className="pointer-events-auto border border-white/20 px-3.5 py-1.5 font-display text-[9.5px] font-medium tracking-[0.3em] text-white/85 transition-all duration-300 hover:border-[#bef264] hover:text-[#bef264] sm:px-4"
+        className="pointer-events-auto inline-flex min-h-[44px] items-center border border-white/20 px-3.5 font-display text-[9.5px] font-medium tracking-[0.3em] text-white/85 transition-all duration-300 hover:border-[#bef264] hover:text-[#bef264] sm:min-h-0 sm:px-4 sm:py-1.5"
       >
         CONTACT
       </button>
     </header>
+  )
+}
+
+/**
+ * Compact scene badge for phones (the right-side indicator is desktop-only).
+ * Shows the current scene + local progress; tapping it glides to the next
+ * scene — a fast, thumb-friendly way to move through the film.
+ */
+export function MobileSceneBadge() {
+  const active = useExperienceStore((s) => s.activeIndicator)
+  const bar = useRef<HTMLSpanElement>(null)
+  const item = INDICATOR[active] ?? INDICATOR[0]
+  const next = INDICATOR[(active + 1) % INDICATOR.length]
+
+  useEffect(() => {
+    return subscribeScroll((s) => {
+      const el = bar.current
+      if (!el) return
+      el.style.width = `${Math.round(Math.min(1, Math.max(0, s.sceneLocal)) * 100)}%`
+    })
+  }, [])
+
+  return (
+    <button
+      onClick={() => {
+        useExperienceStore.getState().clearFocus()
+        scrollToScene(next.scene)
+      }}
+      data-cursor="open"
+      className="pointer-events-auto absolute left-1/2 top-14 z-40 flex -translate-x-1/2 flex-col items-center sm:hidden"
+      aria-label={`Scene ${item.n} — ${item.label}. Tap to continue to ${next.label}`}
+    >
+      <span className="flex items-center gap-2.5 rounded-full border border-white/12 bg-black/50 py-2 pl-3.5 pr-4 backdrop-blur-md">
+        <span className="font-mono text-[9.5px] font-semibold tabular-nums text-[#bef264]">{item.n}</span>
+        <span className="h-2.5 w-px bg-white/20" aria-hidden="true" />
+        <span className="font-mono text-[8.5px] tracking-[0.24em] text-white/75">{item.label}</span>
+        <span aria-hidden="true" className="font-mono text-[9px] text-white/35">›</span>
+      </span>
+      <span className="mt-1.5 h-px w-16 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
+        <span ref={bar} className="block h-full w-0 bg-[#bef264]/90" />
+      </span>
+    </button>
   )
 }
 

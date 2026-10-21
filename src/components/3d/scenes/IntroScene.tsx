@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { SCENES } from '@/lib/scenes'
+import { useExperienceStore } from '@/lib/store'
 import { useSceneVisibility } from '../shared/visibility'
 import ParticleField from '../shared/ParticleField'
 import { makeLine } from '../shared/Label3D'
@@ -16,7 +17,7 @@ export default function IntroScene() {
   const group = useSceneVisibility(IDX)
   const ring = useRef<THREE.Mesh>(null)
   const ring2 = useRef<THREE.Mesh>(null)
-  const isTouch = false
+  const isTouch = useExperienceStore((s) => s.isTouch)
 
   const lines = useMemo(() => {
     const rnd = mulberry32(21)

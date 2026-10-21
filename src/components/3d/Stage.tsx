@@ -10,8 +10,16 @@ import EnvController from './EnvController'
 import Effects from './Effects'
 import { useExperienceStore, type QualityTier } from '@/lib/store'
 
-/** DPR ceilings per tier — pixel density is the #1 fill-rate lever */
-const TIER_DPR: Record<QualityTier, number> = { high: 1.5, med: 1.2, low: 0.85 }
+/** DPR ceilings per tier — pixel density is the #1 fill-rate lever.
+ *  Mobile GPUs (and small screens) get their own, tighter budget: same
+ *  visual language, far fewer pixels per frame → fast movement everywhere. */
+const MOBILE_DEVICE =
+  typeof window !== 'undefined' &&
+  (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 820)
+
+const TIER_DPR: Record<QualityTier, number> = MOBILE_DEVICE
+  ? { high: 1.3, med: 1.05, low: 0.72 }
+  : { high: 1.5, med: 1.2, low: 0.85 }
 const TIER_ORDER: QualityTier[] = ['low', 'med', 'high']
 
 /** True on CPU rasterizers (SwiftShader / llvmpipe) — start them at low tier */
@@ -74,7 +82,8 @@ export default function Stage() {
   const setCanvasReady = useExperienceStore((s) => s.setCanvasReady)
   const setQuality = useExperienceStore((s) => s.setQuality)
   const quality = useExperienceStore((s) => s.quality)
-  const [dpr, setDpr] = useState(1.3)
+  // phones/tablets boot straight at the balanced tier — no wasted first frames
+  const [dpr, setDpr] = useState(() => (MOBILE_DEVICE ? TIER_DPR.med : 1.3))
 
   // follow the governor's tier decision with the matching pixel budget
   useEffect(() => {
@@ -95,13 +104,16 @@ export default function Stage() {
         gl.toneMapping = THREE.ACESFilmicToneMapping
         gl.toneMappingExposure = 1.08
         setCanvasReady(true)
-        // CPU rasterizers skip straight to the lean pipeline
+        // CPU rasterizers skip straight to the lean pipeline;
+        // touch devices start at the balanced tier and adapt from there
         if (isSoftwareGL()) setQuality('low')
+        else if (MOBILE_DEVICE && useExperienceStore.getState().quality === 'high') setQuality('med')
         const w = window as unknown as Record<string, unknown>
         w.__r3fcam = camera
         w.__r3fscene = scene
         w.__r3fgl = gl
         w.__r3fstore = useExperienceStore
+        w.__THREE = THREE
         // dev probe: list what a screen-space ray hits (x/y in CSS pixels)
         const probe = new THREE.Raycaster()
         const probeV = new THREE.Vector2()
@@ -112,14 +124,16 @@ export default function Stage() {
           probe.setFromCamera(probeV, camera)
           return probe
             .intersectObjects(scene.children, true)
-            .slice(0, 8)
+            .slice(0, 40)
             .map((h) => ({ t: h.object.type, d: +h.distance.toFixed(2), vis: h.object.visible }))
         }
       }}
       style={{ position: 'absolute', inset: 0 }}
       onPointerMissed={() => {
-        // clicking empty space returns any focused element to its normal view
+        // clicking/tapping empty space returns any focused element to its
+        // normal view and clears the constellation scan
         useExperienceStore.getState().clearFocus()
+        useExperienceStore.getState().setHoveredTech(null)
       }}
     >
       <FpsGovernor />

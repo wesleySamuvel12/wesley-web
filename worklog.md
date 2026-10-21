@@ -145,3 +145,24 @@ Stage Summary:
 - INSPECT on live product windows navigates to the real URL (touch + mouse) while still zooming for the auto-returning inspect card
 - Cursor is a realistic physical rig and carries the WESLEY SAMUVEL name plate during the intro
 - Tuning surfaces: scenes.ts CUT_WIDTH/boundaryDip, visibility.ts CUT_PAD, SceneDip z/behaviour, CustomCursor spring rates + plate threshold (0.62), webLayout poses
+
+---
+Task ID: 14
+Agent: main (Z.ai Code)
+Task: "Optimize for mobile view + cursor style reveal in mobile view + fast movement"
+
+Work Log:
+- CustomCursor rebuilt as dual-mode rig: mode 'mouse' (fine pointer, unchanged behavior) vs 'touch' (new touch reveal system detected via matchMedia('(pointer: coarse)')). Touch rig = dot 1:1 under fingertip + ring on FAST springs (lerp 0.3/damp 14 vs desktop 0.16/10 — snappy, never sluggish) + one-shot ripple on touchstart + contextual label revealed from the touched [data-cursor] target (VIEW/OPEN/SCAN); rig dissolves 0.7s after lift-off. Intro name plate ("WESLEY SAMUVEL") now glides behind the fingertip on mobile exactly like the desktop cursor. Canvas touches don't clobber 3D-set cursor labels (SCAN/INSPECT) — only DOM targets do.
+- Fast movement: CameraController isTouch-adaptive damping (lambda 2.6→3.8, focus blend 3.4→4.6, portrait pullback 1.62→1.52); Lenis duration 1.1→1.0, wheelMultiplier 1.0, touchMultiplier 1.8; IntroScene real isTouch → 500 particles (was hardcoded false → 1100 everywhere).
+- Mobile performance (Stage): MOBILE_DEVICE detect (coarse pointer OR width<820); mobile-only DPR caps (high 1.3 / med 1.05 / low 0.72 vs desktop 1.5/1.2/0.85); touch devices boot at med tier; onPointerMissed now also clears hoveredTech; dev probe slice 8→40 + __THREE handle.
+- Tap-to-scan: TechScene nodes accept onPointerDown (touch), pointerOut guarded while isTouch so scans persist, 4s auto-clear timer (same auto-return philosophy); TechOverlay/CreativeOverlay hints switch HOVER→TAP wording via store.isTouch.
+- Mobile UI: new MobileSceneBadge (top-center pill "NN | LABEL ›" + scene progress line, tap glides to next scene, sm:hidden — the right-side indicator stays desktop-only); CONTACT nav button 44px touch target + logo hit area; IntroOverlay "SWIPE TO ENTER" on touch; ContactOverlay mobile footer clearance pb-44.
+- Safe areas + CSS cost cuts: layout viewport viewportFit:'cover'; .viewport-pad uses max(0.5rem, env(safe-area-inset-*)); mobile media query lowers backdrop blur 14→9px, disables film-grain blend mode + glass-float loop + heavy frame shadows (phone-GPU compositing savings).
+- Verification (real touch emulation via Playwright hasTouch context, 390×844, after agent-browser's set-device proved unable to emulate touch): coarse=true, store.isTouch=true, touch rig appears+labels+dissolves ✓, intro plate follows finger ✓, SWIPE hint ✓, badge tap advances scene (11→12.09) ✓, tech real-touch tap → hoveredTech='aiml' + SCAN label + 4s auto-clear ✓, web window touch → focusedWeb='iqac' (+URL open via same onClick) + 7s auto-return ✓, contact footer clearance ok ✓, ZERO page errors. Desktop 1600×1000 regression: mouse rig + intro plate + zero errors ✓.
+- Mobile layout bugs found via screenshots + fixed: TechOverlay scan panel covered the headline on phones → moved to bottom-[6%] (sm restores top-[20%]); ContactOverlay footer email overflowed 390px → hidden on mobile (sm:inline) + flex-wrap nav.
+- Test-harness lessons (not app bugs): scrollToScene glide takes ~3.8s — waits must exceed it; the constellation rotates continuously — projected tap coords go stale within seconds, so projection+tap must share one context; the dev __r3fray probe truncated at 8 hits (Points flooding) — raised to 40; sweep filters must find ANY Mesh, not hits[0].
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only.
+
+Stage Summary:
+- Mobile is now a first-class experience: same cinematic film, touch-native cursor language (reveal rig + named intro plate + tap-to-scan + tap-to-navigate), faster camera response, tighter pixel budgets, cheaper compositing, safe-area-aware frame, and a thumb-friendly scene badge for fast navigation.
+- Tuning surfaces: CustomCursor (touch spring rates, plate offset/threshold), CameraController isTouch lambdas, Stage MOBILE_DEVICE/TIER_DPR, scenes.ts (unchanged), TechScene 4s scan timer, TechOverlay/ContactOverlay mobile breakpoints, globals.css mobile media query.

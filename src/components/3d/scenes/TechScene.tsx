@@ -42,8 +42,21 @@ function ConstellationNode({ node, index }: { node: (typeof TECH_NODES)[number];
   const coreRef = useRef<THREE.Mesh>(null)
   const setHoveredTech = useExperienceStore((s) => s.setHoveredTech)
   const setCursor = useExperienceStore((s) => s.setCursor)
+  const isTouch = useExperienceStore((s) => s.isTouch)
+  const hoveredId = useExperienceStore((s) => s.hoveredTech)
   const color = CATEGORY_COLORS[node.category]
   const basePos = NODE_POSITIONS[index]
+
+  // touch: a tap selects a node and the scan auto-clears after 4s
+  // (same auto-return philosophy as every other focus state)
+  useEffect(() => {
+    if (!isTouch || hoveredId !== node.id) return
+    const t = window.setTimeout(() => {
+      setHoveredTech(null)
+      setCursor('default')
+    }, 4000)
+    return () => window.clearTimeout(t)
+  }, [isTouch, hoveredId, node.id, setHoveredTech, setCursor])
 
   useFrame((state, delta) => {
     const g = groupRef.current
@@ -87,8 +100,17 @@ function ConstellationNode({ node, index }: { node: (typeof TECH_NODES)[number];
           setCursor('explore', 'SCAN')
         }}
         onPointerOut={() => {
+          // touch taps must persist their scan — only the 4s timer or a
+          // tap on empty space may clear it
+          if (useExperienceStore.getState().isTouch) return
           setHoveredTech(null)
           setCursor('default')
+        }}
+        onPointerDown={(e) => {
+          if (!useExperienceStore.getState().isTouch) return
+          e.stopPropagation()
+          setHoveredTech(node.id)
+          setCursor('explore', 'SCAN')
         }}
       >
         <sphereGeometry args={[0.24, 12, 12]} />

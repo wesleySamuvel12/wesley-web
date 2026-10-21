@@ -10,6 +10,7 @@ export default function CreativeOverlay() {
   const focusedId = useExperienceStore((s) => s.focusedCreative)
   const focusReturnAt = useExperienceStore((s) => s.focusReturnAt)
   const setFocusedCreative = useExperienceStore((s) => s.setFocusedCreative)
+  const isTouch = useExperienceStore((s) => s.isTouch)
   const work = CREATIVE_WORKS.find((w) => w.id === focusedId) ?? null
 
   return (
@@ -22,7 +23,7 @@ export default function CreativeOverlay() {
           THE <span className="text-[#bef264]">GALLERY</span>
         </h2>
         <p data-reveal className="mt-4 font-mono text-[9px] tracking-[0.32em] text-white/40">
-          {work ? 'INSPECTING —' : 'HOVER A DISPLAY · CLICK TO INSPECT'}
+          {work ? 'INSPECTING —' : isTouch ? 'TAP A DISPLAY · INSPECT + OPEN' : 'HOVER A DISPLAY · CLICK TO INSPECT'}
         </p>
         {!work && (
           <p data-reveal className="mt-2 font-mono text-[8px] tracking-[0.26em] text-white/25">

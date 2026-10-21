@@ -21,7 +21,7 @@ import CreativeOverlay from '@/components/overlays/CreativeOverlay'
 import JourneyOverlay from '@/components/overlays/JourneyOverlay'
 import ContactOverlay from '@/components/overlays/ContactOverlay'
 import Loader from '@/components/navigation/Loader'
-import { Navigation, SectionIndicator } from '@/components/navigation/Navigation'
+import { Navigation, SectionIndicator, MobileSceneBadge } from '@/components/navigation/Navigation'
 import ErrorBoundary from './ErrorBoundary'
 import SceneDip from './SceneDip'
 
@@ -76,8 +76,8 @@ export default function ExperienceShell() {
         ))}
       </div>
 
-      {/* fixed cinematic viewport */}
-      <div className="fixed inset-0 z-10 p-2 sm:p-3.5 md:p-5" role="main">
+      {/* fixed cinematic viewport — padding respects device safe areas */}
+      <div className="viewport-pad fixed inset-0 z-10" role="main">
         <div className="experience-frame relative h-full w-full overflow-hidden rounded-[16px] border border-white/[0.09] bg-[#050505] sm:rounded-[22px] md:rounded-[26px]">
           <ErrorBoundary>
             {mounted && <Stage />}
@@ -106,6 +106,7 @@ export default function ExperienceShell() {
 
           {/* chrome */}
           <Navigation />
+          <MobileSceneBadge />
           <SectionIndicator />
           <div className="film-grain pointer-events-none absolute inset-0 z-[60]" aria-hidden="true" />
           <div className="frame-vignette pointer-events-none absolute inset-0 z-[61] rounded-[inherit]" aria-hidden="true" />
