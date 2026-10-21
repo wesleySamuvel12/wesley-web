@@ -16,16 +16,15 @@ const FOOTER_LINKS = [
 export default function ContactOverlay() {
   return (
     <SceneOverlay index={13} className="flex items-center">
-      <div className="w-full px-6 pt-10 sm:px-12 md:px-16 lg:px-20">
-        <h2 className="font-display font-bold leading-[0.9] tracking-[-0.02em] text-white text-[clamp(3rem,9.5vw,8.6rem)]">
-          <span data-reveal className="block">LET&apos;S</span>
-          <span data-reveal className="block">BUILD</span>
+      <div className="w-full px-6 pb-36 pt-6 sm:px-12 md:px-16 md:pb-40 lg:px-20">
+        <h2 className="font-display font-bold leading-[0.92] tracking-[-0.02em] text-white text-[clamp(2.8rem,8vw,7.8rem)]">
+          <span data-reveal className="block">LET&apos;S BUILD</span>
           <span data-reveal className="block">SOMETHING</span>
           <span data-reveal className="block">
             <span className="text-[#bef264]">REAL.</span>
           </span>
         </h2>
-        <p data-reveal className="mt-7 max-w-md text-[13px] leading-relaxed text-white/55 sm:text-sm">
+        <p data-reveal className="mt-6 max-w-md text-[13px] leading-relaxed text-white/55 sm:text-sm">
           Have an idea, technical problem or product worth building? The
           lab is open — let&apos;s put something on the bench.
         </p>

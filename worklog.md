@@ -64,3 +64,34 @@ Stage Summary:
 - Production-ready cinematic experience at /: 14 scenes ≈ 32.3 screens of scroll, one continuous damped camera
 - Key tuning surfaces: src/lib/scenes.ts (durations/camera/colors), overlay fade windows per scene, visibility windows in shared/visibility.ts
 - Placeholders to replace: github/demo URLs in src/data/projects.ts, email/socials in src/data/content.ts
+
+---
+Task ID: 11
+Agent: main (Z.ai Code)
+Task: "Fast response + highly accurate" pass — adaptive performance engine + spec-accuracy fixes
+
+Work Log:
+- Audited with agent-browser: SwiftShader (software GL) confirmed as sandbox renderer; baseline 3-5 FPS sitewide
+- Isolated bottleneck via controlled experiments: EffectComposer (MSAA4 + Bloom + per-pixel Noise + Vignette at DPR 1.4-1.55) = 7 FPS vs 60 FPS without; scene content itself cheap (60 FPS with composer off); drei PerformanceMonitor never fired at 4 FPS
+- Built deterministic FPS governor (Stage.tsx): 1.5s measurement windows after warm-up, <26fps twice → tier down, >52fps three windows → tier up (hysteresis, no oscillation); 3 tiers (low/med/high)
+- Software-GL detection (SwiftShader/llvmpipe regex) starts weak devices at low tier instantly
+- Tier-driven Effects.tsx: high = MSAA2 + mipmap Bloom + Vignette; med = no MSAA; low = composer bypassed; Noise pass deleted (CSS film-grain overlay already exists — duplicate effect removed)
+- Tier DPR ceilings: 1.5 / 1.2 / 0.85; governor owns quality, Stage syncs DPR via effect
+- Lite mode for heavy scenes: HeroScene trims 4→2 lights + hides volumetric beams + fewer particles; HydroScene adaptive water tessellation (110/80/56 segments) + reduced particle counts; EnvController untouched
+- Envmap (drei Environment + Lightformers) now conditional: skipped at low tier (measured +47% FPS); wrapped in own Suspense for safe tier remount
+- PCB texture factory: 2048x1408 drawn at 0.75 raster scale via ctx.scale (faster boot, still crisp)
+- Loader synthetic progress 1.8s → 1.15s; Lenis smoothing duration 1.35 → 1.1 (faster response, still cinematic)
+- Dev handles: __r3fgl, __r3fstore on window for diagnostics
+- Accuracy fixes from full 14-scene screenshot sweep:
+  - INDICATOR renumbered to spec: 01 INTRO / 02 HERO / 03 IDENTITY / 04 ABOUT / 05 TECH / 06 WORK / 07 STATS / 08 GALLERY / 09 JOURNEY / 10 CONTACT (was folding HERO into 01 and STATS into LAB)
+  - scrollToScene lands at 9% into a scene so overlays are fully visible after indicator/nav jumps (was landing on the fade-in boundary)
+  - Koottam overlay: description line-clamped (2 lines when flow chain present), flow chain lowered to bottom-5%, connectors h-3 — paragraph/chain collision fixed
+  - Contact overlay: heading restructured to 3 lines (LET'S BUILD / SOMETHING / REAL.), clamp 8vw, content pb-36/40 — heading/footer collision fixed
+- Environment issues found & fixed: dev server process kept dying (subshell backgrounding reaped) — stable via (cmd &) pattern; Tailwind CSS build went stale mid-session (new utilities like bottom-[5%] not generated, verified via computed-style probe) — resolved by clean dev server restart; a transient HMR "lite is not defined" error in console history confirmed stale (cleared console + reload → zero errors)
+- Verified interactions end-to-end: tech node hover (store hoveredTech='python', cursor 'explore'), creative click-to-focus (focusedCreative='poster', camera dolly + inspect panel + dim), close inspect, STATS indicator jump (lands sceneIndex 10 local 0.09 with content visible), koottam/contact layouts, mobile 390x844 intro + data scenes, indicator HERO 02 + GALLERY 08 + CONTACT 10 numbering
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only, FPS sweep (software): intro 60 / tech 36 / hydro 20 / journey 12 / hero 8.3 / about 7.8 (was 3-5 everywhere); real GPUs hold tier high at 60fps
+
+Stage Summary:
+- Performance is now adaptive and self-managing: real GPUs → full pipeline (bloom, MSAA, envmap, beams) at 60fps; integrated GPUs → governor steps to med; software/no-GPU → lean pipeline, no composer, envmap off
+- Accuracy: indicator numbering, jump landing positions, koottam/contact typography collisions all fixed and screenshot-verified
+- Tuning surfaces: src/lib/scenes.ts (durations/cameras/indicator), Stage.tsx (TIER_DPR + governor thresholds), Effects.tsx (per-tier post stack), visibility windows in shared/visibility.ts

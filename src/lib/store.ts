@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 
 export type CursorType = 'default' | 'view' | 'explore' | 'open' | 'link' | 'drag'
+export type QualityTier = 'high' | 'med' | 'low'
 
 interface ExperienceState {
   /** loader finished, experience revealed */
@@ -13,6 +14,8 @@ interface ExperienceState {
   isTouch: boolean
   reducedMotion: boolean
   activeIndicator: number
+  /** adaptive render quality — driven by PerformanceMonitor */
+  quality: QualityTier
   /** constellation hover */
   hoveredTech: string | null
   /** creative gallery focused display */
@@ -28,6 +31,7 @@ interface ExperienceState {
   setIsTouch: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
   setActiveIndicator: (i: number) => void
+  setQuality: (q: QualityTier) => void
   setHoveredTech: (id: string | null) => void
   setFocusedCreative: (id: string | null) => void
   setCurrentMilestone: (i: number) => void
@@ -42,6 +46,7 @@ export const useExperienceStore = create<ExperienceState>((set) => ({
   isTouch: false,
   reducedMotion: false,
   activeIndicator: 0,
+  quality: 'high',
   hoveredTech: null,
   focusedCreative: null,
   currentMilestone: 0,
@@ -53,6 +58,7 @@ export const useExperienceStore = create<ExperienceState>((set) => ({
   setIsTouch: (v) => set({ isTouch: v }),
   setReducedMotion: (v) => set({ reducedMotion: v }),
   setActiveIndicator: (i) => set((s) => (s.activeIndicator === i ? s : { activeIndicator: i })),
+  setQuality: (q) => set((s) => (s.quality === q ? s : { quality: q })),
   setHoveredTech: (id) => set((s) => (s.hoveredTech === id ? s : { hoveredTech: id })),
   setFocusedCreative: (id) => set((s) => (s.focusedCreative === id ? s : { focusedCreative: id })),
   setCurrentMilestone: (i) => set((s) => (s.currentMilestone === i ? s : { currentMilestone: i })),

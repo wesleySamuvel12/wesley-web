@@ -61,7 +61,11 @@ export function sceneStartPx(index: number): number {
 
 /** Cinematic camera glide to a scene */
 export function scrollToScene(index: number, opts?: { instant?: boolean }) {
-  const target = sceneStartPx(index)
+  const idx = Math.min(Math.max(0, index), SCENES.length - 1)
+  const start = sceneStartPx(idx)
+  // land just inside the scene so its overlay window is already fully open
+  const span = (SCENES[idx].duration / TOTAL_DURATION) * maxScroll()
+  const target = start + span * 0.09
   if (opts?.instant) {
     window.scrollTo(0, target)
     return
@@ -113,7 +117,7 @@ export function initScrollEngine(): () => void {
 
   lenis = new Lenis({
     autoRaf: false,
-    duration: 1.35,
+    duration: 1.1,
     smoothWheel: true,
     wheelMultiplier: 0.95,
     touchMultiplier: 1.4,

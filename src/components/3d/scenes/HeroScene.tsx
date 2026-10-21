@@ -173,6 +173,8 @@ export default function HeroScene() {
   })
 
   const isTouch = useExperienceStore((s) => s.isTouch)
+  const quality = useExperienceStore((s) => s.quality)
+  const lite = quality !== 'high' || isTouch
 
   return (
     <group ref={group}>
@@ -347,24 +349,28 @@ export default function HeroScene() {
         <Label3D text="USB-C · 3V3" position={[-0.15, TOP + 0.26, 1.42]} scale={0.11} mono opacity={0.8} />
       </group>
 
-      {/* ------- studio lighting ------- */}
-      <spotLight position={[2.6, 4.6, 2.6]} angle={0.55} penumbra={1} intensity={95} color="#dceaff" distance={20} decay={2} />
-      <spotLight position={[-3.4, 3.2, -2.2]} angle={0.7} penumbra={1} intensity={40} color="#8b7cf6" distance={18} decay={2} />
-      <pointLight position={[0, 0.6, 4.4]} intensity={7} color="#67e8f9" distance={12} decay={2} />
-      <pointLight position={[0, -1.2, 0]} intensity={5} color="#0e7f8c" distance={7} decay={2} />
+      {/* ------- studio lighting (lite mode trims to 2 lights) ------- */}
+      <spotLight position={[2.6, 4.6, 2.6]} angle={0.55} penumbra={1} intensity={lite ? 115 : 95} color="#dceaff" distance={20} decay={2} />
+      {!lite && <spotLight position={[-3.4, 3.2, -2.2]} angle={0.7} penumbra={1} intensity={40} color="#8b7cf6" distance={18} decay={2} />}
+      {!lite && <pointLight position={[0, 0.6, 4.4]} intensity={7} color="#67e8f9" distance={12} decay={2} />}
+      {!lite && <pointLight position={[0, -1.2, 0]} intensity={5} color="#0e7f8c" distance={7} decay={2} />}
 
-      {/* volumetric slabs */}
-      <mesh position={[-1.6, 2.4, -1.6]} rotation={[0.35, 0.3, -0.5]}>
-        <planeGeometry args={[1.6, 6.5]} />
-        <meshBasicMaterial map={beam} transparent opacity={0.1} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[2.2, 2.6, -2.4]} rotation={[0.4, -0.4, 0.45]}>
-        <planeGeometry args={[1.2, 6]} />
-        <meshBasicMaterial map={beam} transparent opacity={0.06} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
-      </mesh>
+      {/* volumetric slabs (skipped in lite mode — pure fill rate) */}
+      {!lite && (
+        <>
+          <mesh position={[-1.6, 2.4, -1.6]} rotation={[0.35, 0.3, -0.5]}>
+            <planeGeometry args={[1.6, 6.5]} />
+            <meshBasicMaterial map={beam} transparent opacity={0.1} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[2.2, 2.6, -2.4]} rotation={[0.4, -0.4, 0.45]}>
+            <planeGeometry args={[1.2, 6]} />
+            <meshBasicMaterial map={beam} transparent opacity={0.06} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
+        </>
+      )}
 
       <ParticleField
-        count={isTouch ? 90 : 200}
+        count={lite ? 90 : 200}
         spread={[11, 7, 11]}
         size={0.022}
         color="#a8c8dc"

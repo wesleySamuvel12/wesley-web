@@ -15,12 +15,12 @@ export default function Loader() {
   const [gone, setGone] = useState(false)
   const [display, setDisplay] = useState(0)
 
-  // synthetic progress so the loader always feels alive
+  // synthetic progress so the loader always feels alive (kept short — fast first response)
   useEffect(() => {
     const obj = { v: 0 }
     const tween = gsap.to(obj, {
       v: 100,
-      duration: 1.8,
+      duration: 1.15,
       ease: 'power2.inOut',
       onUpdate: () => setDisplay(Math.round(obj.v)),
     })

@@ -38,7 +38,11 @@ export default function ProjectOverlay({ index, project }: ProjectOverlayProps) 
         <p data-reveal className="mt-4 max-w-md font-mono text-[9.5px] tracking-[0.3em] text-white/50">
           {project.subtitle}
         </p>
-        <p data-reveal className="mt-4 hidden max-w-sm text-[12.5px] leading-relaxed text-white/50 md:block">
+        <p
+          data-reveal
+          className="mt-4 hidden max-w-sm text-[12.5px] leading-relaxed text-white/50 line-clamp-3 md:block"
+          style={project.flow ? { WebkitLineClamp: 2 } : undefined}
+        >
           {project.description}
         </p>
       </div>
@@ -74,14 +78,14 @@ export default function ProjectOverlay({ index, project }: ProjectOverlayProps) 
 
       {/* koottam data-flow chain */}
       {project.flow && (
-        <div data-reveal className="absolute bottom-[9%] left-6 sm:left-12 md:left-16 lg:left-20">
+        <div data-reveal className="absolute bottom-[5%] left-6 sm:left-12 md:left-16 lg:left-20">
           <div className="flex flex-col gap-0">
             {project.flow.map((step, i) => (
               <div key={step} className="flex items-center gap-3">
                 <div className="flex flex-col items-center">
                   <span className="font-mono text-[9.5px] tracking-[0.34em] text-white/80">{step}</span>
                   {i < project.flow!.length - 1 && (
-                    <span className="flow-arrow my-1 block h-4 w-px bg-gradient-to-b from-white/60 to-white/10" />
+                    <span className="flow-arrow my-0.5 block h-3 w-px bg-gradient-to-b from-white/60 to-white/10" />
                   )}
                 </div>
                 {i === 1 && (

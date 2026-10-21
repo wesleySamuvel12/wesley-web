@@ -1,19 +1,27 @@
 'use client'
 
-import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
-import { BlendFunction } from 'postprocessing'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
+import { useExperienceStore } from '@/lib/store'
 
+/**
+ * Tier-driven post pipeline (the CSS film-grain overlay replaces a Noise pass):
+ * - high: 2×MSAA + mipmap bloom + vignette
+ * - med:  no MSAA (pixel density hides aliasing) + bloom + vignette
+ * - low:  composer bypassed entirely — raw pipeline, maximum FPS
+ */
 export default function Effects() {
+  const quality = useExperienceStore((s) => s.quality)
+  if (quality === 'low') return null
+
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer multisampling={quality === 'high' ? 2 : 0} enableNormalPass={false}>
       <Bloom
-        intensity={0.55}
-        luminanceThreshold={0.6}
-        luminanceSmoothing={0.25}
+        intensity={0.5}
+        luminanceThreshold={0.62}
+        luminanceSmoothing={0.28}
         mipmapBlur
-        radius={0.72}
+        radius={0.7}
       />
-      <Noise premultiply blendFunction={BlendFunction.SCREEN} opacity={0.14} />
       <Vignette eskil={false} offset={0.17} darkness={0.8} />
     </EffectComposer>
   )

@@ -97,6 +97,7 @@ void main() {
 
 function WaterSurface() {
   const mesh = useRef<THREE.Mesh>(null)
+  const quality = useExperienceStore((s) => s.quality)
 
   const mat = useMemo(
     () =>
@@ -120,14 +121,13 @@ function WaterSurface() {
     []
   )
 
-  const geom = useMemo(() => new THREE.PlaneGeometry(60, 40, 110, 72), [])
+  // analytic normals keep the surface believable even at reduced tessellation
+  const geom = useMemo(() => {
+    const seg = quality === 'low' ? 56 : quality === 'med' ? 80 : 110
+    return new THREE.PlaneGeometry(60, 40, seg, Math.round(seg * 0.66))
+  }, [quality])
 
-  useEffect(() => {
-    return () => {
-      mat.dispose()
-      geom.dispose()
-    }
-  }, [mat, geom])
+  useEffect(() => () => geom.dispose(), [geom])
 
   useFrame(({ camera }, delta) => {
     mat.uniforms.uTime.value += delta
@@ -153,6 +153,9 @@ export default function HydroScene() {
   const beacon = useRef<THREE.Mesh>(null)
   const shafts = useRef<THREE.Group>(null)
   const setUnderwaterStore = useExperienceStore((s) => s.setUnderwater)
+  const quality = useExperienceStore((s) => s.quality)
+  const isTouch = useExperienceStore((s) => s.isTouch)
+  const lite = quality !== 'high' || isTouch
 
   const beam = useMemo(() => createBeamTexture('rgba(120,220,235,0.5)'), [])
   const glow = useMemo(() => createGlowTexture('rgba(255,190,120,1)'), [])
@@ -286,11 +289,11 @@ export default function HydroScene() {
       </group>
 
       {/* underwater particles + bubbles */}
-      <ParticleField count={260} spread={[15, 3.4, 11]} center={[0, -1.75, 0]} size={0.02} color="#67d8e0" opacity={0.4} speed={0.008} rise={0.1} seed={61} />
-      <ParticleField count={60} spread={[1.4, 2.4, 1.4]} center={[0, -1.2, 0.1]} size={0.045} color="#9fe8ec" opacity={0.3} speed={0.01} rise={0.3} seed={63} />
+      <ParticleField count={lite ? 130 : 260} spread={[15, 3.4, 11]} center={[0, -1.75, 0]} size={0.02} color="#67d8e0" opacity={0.4} speed={0.008} rise={0.1} seed={61} />
+      <ParticleField count={lite ? 30 : 60} spread={[1.4, 2.4, 1.4]} center={[0, -1.2, 0.1]} size={0.045} color="#9fe8ec" opacity={0.3} speed={0.01} rise={0.3} seed={63} />
 
       {/* above-water particles (spray / dust) */}
-      <ParticleField count={90} spread={[12, 2.4, 10]} center={[0, 0.8, 0]} size={0.02} color="#cfe8ea" opacity={0.2} speed={0.02} seed={65} />
+      <ParticleField count={lite ? 45 : 90} spread={[12, 2.4, 10]} center={[0, 0.8, 0]} size={0.02} color="#cfe8ea" opacity={0.2} speed={0.02} seed={65} />
 
       {/* lighting — natural sun above, cyan beneath */}
       <directionalLight position={[5, 6, -6]} intensity={2.4} color="#fff1d8" />

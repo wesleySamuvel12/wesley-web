@@ -34,10 +34,16 @@ export interface PcbTextures {
  * gold pads and silkscreen lettering. Returns color + emissive maps.
  */
 export function createPcbTextures(seed = 7): PcbTextures {
-  const W = 2048
-  const H = 1408
-  const { canvas, ctx } = makeCanvas(W, H)
-  const { canvas: eCanvas, ctx: eCtx } = makeCanvas(W, H)
+  // drawn in a 2048x1408 logical space, rasterized at 0.75 — faster boot, still crisp
+  const LW = 2048
+  const LH = 1408
+  const S = 0.75
+  const W = LW
+  const H = LH
+  const { canvas, ctx } = makeCanvas(Math.round(LW * S), Math.round(LH * S))
+  const { canvas: eCanvas, ctx: eCtx } = makeCanvas(Math.round(LW * S), Math.round(LH * S))
+  ctx.scale(S, S)
+  eCtx.scale(S, S)
 
   // base — deep matte charcoal
   ctx.fillStyle = '#0d1014'

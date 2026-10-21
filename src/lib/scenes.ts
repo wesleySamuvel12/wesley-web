@@ -219,17 +219,18 @@ export interface IndicatorItem {
   scene: number
 }
 
-/** Right-side vertical scene indicator — 9 major beats */
+/** Right-side vertical scene indicator — spec numbering: 01-09 + CONTACT */
 export const INDICATOR: IndicatorItem[] = [
   { n: '01', label: 'INTRO', scene: 0 },
-  { n: '02', label: 'IDENTITY', scene: 2 },
-  { n: '03', label: 'ABOUT', scene: 3 },
-  { n: '04', label: 'TECH', scene: 4 },
-  { n: '05', label: 'WORK', scene: 5 },
-  { n: '06', label: 'LAB', scene: 8 },
-  { n: '07', label: 'GALLERY', scene: 11 },
-  { n: '08', label: 'JOURNEY', scene: 12 },
-  { n: '09', label: 'CONTACT', scene: 13 },
+  { n: '02', label: 'HERO', scene: 1 },
+  { n: '03', label: 'IDENTITY', scene: 2 },
+  { n: '04', label: 'ABOUT', scene: 3 },
+  { n: '05', label: 'TECH', scene: 4 },
+  { n: '06', label: 'WORK', scene: 5 },
+  { n: '07', label: 'STATS', scene: 10 },
+  { n: '08', label: 'GALLERY', scene: 11 },
+  { n: '09', label: 'JOURNEY', scene: 12 },
+  { n: '10', label: 'CONTACT', scene: 13 },
 ]
 
 /** Which indicator entry a given scene index belongs to */
