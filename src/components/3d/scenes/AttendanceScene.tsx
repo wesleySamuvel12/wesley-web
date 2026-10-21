@@ -7,6 +7,7 @@ import { RoundedBox } from '@react-three/drei'
 import { SCENES } from '@/lib/scenes'
 import { useSceneVisibility } from '../shared/visibility'
 import { Label3D, GlowSprite } from '../shared/Label3D'
+import FaceHologram from '../shared/FaceHologram'
 import ParticleField from '../shared/ParticleField'
 import { createQrTexture, createScreenTexture, createGridTexture, createGlowTexture } from '@/lib/textures'
 
@@ -46,8 +47,8 @@ export default function AttendanceScene() {
       m.opacity = 0.55 + Math.sin(t * 6) * 0.2
     }
     if (face.current) {
-      face.current.rotation.y = Math.sin(t * 0.3) * 0.5
-      face.current.rotation.x = Math.cos(t * 0.22) * 0.15
+      face.current.rotation.y = Math.sin(t * 0.3) * 0.45
+      face.current.rotation.x = Math.cos(t * 0.22) * 0.12
     }
     if (geoRing.current) {
       const m = geoRing.current.material as THREE.MeshBasicMaterial
@@ -84,18 +85,21 @@ export default function AttendanceScene() {
         <meshStandardMaterial color="#67e8f9" emissive="#67e8f9" emissiveIntensity={2} toneMapped={false} />
       </mesh>
 
-      {/* scanner hologram */}
+      {/* scanner hologram — the ORIGINAL FACE, rendered as a living hologram */}
       <group position={[0, 0.75, -0.58]}>
         <mesh>
           <planeGeometry args={[1.25, 1.75]} />
           <meshBasicMaterial color="#67e8f9" transparent opacity={0.08} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
-        <mesh ref={face} position={[0, 0.25, 0.06]}>
-          <icosahedronGeometry args={[0.32, 1]} />
-          <meshBasicMaterial color="#7ff5e8" wireframe transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
+        {/* the real face — shader hologram + luminance point-cloud dust */}
+        <FaceHologram position={[0, 0.2, 0.05]} width={1.06} />
+        {/* scan cage around the hologram */}
+        <mesh ref={face} position={[0, 0.2, 0.02]}>
+          <icosahedronGeometry args={[0.6, 1]} />
+          <meshBasicMaterial color="#7ff5e8" wireframe transparent opacity={0.13} blending={THREE.AdditiveBlending} depthWrite={false} />
         </mesh>
-        <mesh ref={scanLine} position={[0, 0.55, 0.06]}>
-          <boxGeometry args={[1.05, 0.006, 0.006]} />
+        <mesh ref={scanLine} position={[0, 0.55, 0.075]}>
+          <boxGeometry args={[1.0, 0.006, 0.006]} />
           <meshBasicMaterial color="#bef264" transparent opacity={0.7} blending={THREE.AdditiveBlending} depthWrite={false} />
         </mesh>
       </group>

@@ -188,3 +188,24 @@ Stage Summary:
 - Portfolio now showcases 4 real deployed products: KOOTTAM CART (project scene + overlay + tappable 3D nodes), IQAC PORTAL, FDP PRO (new third browser window in WEB PRODUCTS scene), MS PROJECT CLONE — every inspect path navigates to its live URL (touch + mouse)
 - WEB scene is a 3-window cinematic triptych (left-near / center-back / right-high) with depth-relative focus zoom
 - Tuning surfaces: webLayout.ts poses/stand-off, data/web.ts, data/projects.ts koottam entry
+
+---
+Task ID: 16
+Agent: main (Z.ai Code)
+Task: "Smart Attendance = ORIGINAL FACE hologram" + "intro letters cursor magnification (red gradient) + bending while magnified" + "cursor magnification must work on mobile"
+
+Work Log:
+- Generated the original face: z-ai CLI portrait (front-facing, black background, 864x1152) -> public/images/holo/face.png
+- New shared 3D component FaceHologram.tsx: the real photograph rendered through a custom hologram ShaderMaterial (cyan duotone ramp, drifting scanlines, lime scan sweep climbing the face, RGB chromatic fringe, projector flicker, edge/base dissolve, additive blending) PLUS a luminance-sampled point cloud ("face dust", ~1.4k points, runtime canvas sampling, cyan-white by brightness, additive) hovering just in front of the plane; manual TextureLoader (no suspense), gentle hologram sway + projector bob; full dispose on unmount
+- AttendanceScene: replaced the abstract icosahedron with the FACE hologram (width 1.06 in the scanner gate); kept + enlarged the wireframe cage around it (r 0.6, opacity 0.13) and the lime sweep line; FACE SCAN / LIVENESS ON label unchanged
+- New MagnifyTitle.tsx (intro headline as a magnetic lens field): every letter of WESLEY / SAMUVEL. is a 3-span cell (un-transformed measuring host -> transform mover -> red-gradient overlay); gaussian lens under the pointer magnifies each letter and swells its neighbours (wave); magnified letters crossfade into a hot RED gradient (linear-gradient 168deg #ffb4a8->#ff5f4e->#f02438->#c81e3c->#6d1024, background-clip:text) with crimson drop-shadow bloom; letters BEND while magnified (rotateZ lean toward cursor, rotateX depth tilt under 950px perspective, skewX shear, lift) ; lime dot keeps its accent (excluded from gradient)
+- MOBILE magnification: the same field is driven by pointermove/pointerdown for ANY pointerType — touch drags/taps magnify under the fingertip; lens radius auto-adapts to letter size (sigma = clamp(meanLetterHeight*0.55, 42, 122) -> ~118px desktop wave, ~42px tight bead on phones; strength 1.28 desktop / 0.95 touch); pointerup/pointercancel/mouseleave relax the field back to identity; first mobile pass (fixed sigma 92) bloomed the whole title — fixed by the adaptive radius
+- Perf: one batched rect read + batched style write per frame on ~14 cells, zero react state, will-change-transform movers, zIndex lift for magnified letters; reduced-motion bypasses transforms
+- IntroOverlay: headline rebuilt on MagnifyTitle (visual parity at rest, aria-label preserved, dot lime)
+- Verified via agent-browser (1600x1000): intro at rest identical to previous build; mouse over "ES" -> huge red-gradient magnification + bend wave (screenshots r16_intro_mag1/2); mobile 390x844 synthetic touch -> localized red lens under fingertip + name plate follows (r16_mobile_touch_mag2); lifecycle probe — during touch transform "translateY(-11px) rotateX(.13deg) rotateZ(4.64deg) skewX(-2.2deg) scale(1.418)", after release exactly identity + gradient opacity 0; attendance desktop + mobile: original face hologram inside scan cage with geofence/QR/dashboards intact (r16_holo_face.png, r16_holo_mobile.png); "WESLEY SAMUVEL" pill seen mid-attendance was the intro plate's fade tail during the 3.8s scrollToScene glide (probed: opacity 0 after settle — not a bug)
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only
+
+Stage Summary:
+- Smart Attendance now scans the user's ORIGINAL FACE hologram (shader hologram + point-cloud dust) instead of an abstract wireframe
+- Intro headline is a cursor-driven lens: red-gradient magnification + bending wave on every letter, and it works under the fingertip on mobile (adaptive lens radius)
+- Tuning surfaces: MagnifyTitle (RED_GRADIENT, strength, sigma clamp 42-122, bend gains), FaceHologram (width, shader uniforms), AttendanceScene face/cage placement
