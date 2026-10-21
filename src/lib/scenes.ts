@@ -263,6 +263,21 @@ export const SCENE_TO_INDICATOR: number[] = (() => {
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
+/**
+ * Dip-to-black intensity around an integer scene boundary (a film cut).
+ * `sceneFloat` distance to the nearest boundary → opacity. Skips the very
+ * start (no scene before it) and the very end of the track. Capped at 0.985
+ * so a user resting exactly on a boundary never locks a fully black frame.
+ */
+export const CUT_WIDTH = 0.085
+export function boundaryDip(sf: number): number {
+  const k = Math.round(sf)
+  if (k <= 0 || k >= SCENES.length) return 0
+  const d = Math.abs(sf - k)
+  if (d >= CUT_WIDTH) return 0
+  return (1 - d / CUT_WIDTH) * 0.985
+}
+
 export const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
 export const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)

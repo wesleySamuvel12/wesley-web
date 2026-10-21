@@ -2,15 +2,28 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useExperienceStore } from '@/lib/store'
+import { getScrollState } from '@/lib/scrollEngine'
 
 /**
- * Custom cursor — small dot + interpolated ring with contextual labels.
- * Automatically disabled on touch devices.
+ * Custom cursor — a small physical rig, not a static sprite:
+ *  · dot      — follows the pointer 1:1, breathes while idle
+ *  · ring     — trails on a spring, stretches along its motion vector and
+ *               banks into direction changes (velocity-driven rotate/scale)
+ *  · name     — during the INTRO the signature "WESLEY SAMUVEL" plate glides
+ *               behind the cursor with its own heavier lag, tilting with speed
+ *  · press    — pressing compresses the rig; release fires a one-shot ripple
+ * Contextual labels (VIEW / INSPECT / OPEN) still take over on interactive
+ * targets. Automatically disabled on touch devices.
  */
+
+const damp = (cur: number, target: number, lambda: number, dt: number) =>
+  cur + (target - cur) * (1 - Math.exp(-lambda * dt))
+
 export default function CustomCursor() {
   const dot = useRef<HTMLDivElement>(null)
   const ring = useRef<HTMLDivElement>(null)
-  const label = useRef<HTMLSpanElement>(null)
+  const plate = useRef<HTMLDivElement>(null)
+  const pingHost = useRef<HTMLDivElement>(null)
   const [enabled, setEnabled] = useState(false)
 
   useEffect(() => {
@@ -22,23 +35,113 @@ export default function CustomCursor() {
     setEnabled(true)
     document.documentElement.classList.add('has-custom-cursor')
 
-    const pos = { x: -100, y: -100, rx: -100, ry: -100 }
+    const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
+    const vel = { sv: 0, ang: 0, sx: 0 } // smoothed speed, motion angle, stretch
+    const state = { op: 0, pop: 0, pressed: false, hidden: true, last: 0 }
     let raf = 0
 
     const onMove = (e: PointerEvent) => {
       pos.x = e.clientX
       pos.y = e.clientY
+      if (state.hidden) {
+        state.hidden = false
+        pos.rx = pos.x
+        pos.ry = pos.y
+        pos.px = pos.x
+        pos.py = pos.y
+      }
     }
 
-    const tick = () => {
-      pos.rx += (pos.x - pos.rx) * 0.16
-      pos.ry += (pos.y - pos.ry) * 0.16
-      if (dot.current) dot.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%,-50%)`
-      if (ring.current) ring.current.style.transform = `translate3d(${pos.rx}px, ${pos.ry}px, 0) translate(-50%,-50%)`
+    const onDown = () => {
+      state.pressed = true
+    }
+    const onUp = () => {
+      state.pressed = false
+    }
+
+    const onClick = (e: MouseEvent) => {
+      const host = pingHost.current
+      if (!host) return
+      const p = document.createElement('span')
+      p.className = 'cursor-ping pointer-events-none fixed left-0 top-0 z-[198] h-10 w-10 rounded-full border border-white/60'
+      p.style.left = `${e.clientX}px`
+      p.style.top = `${e.clientY}px`
+      p.style.transform = 'translate(-50%, -50%)'
+      host.appendChild(p)
+      p.addEventListener('animationend', () => p.remove(), { once: true })
+    }
+
+    const onLeave = () => {
+      state.hidden = true
+    }
+    const onEnter = () => {
+      state.hidden = false
+    }
+
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, state.last ? (now - state.last) / 1000 : 0.016)
+      state.last = now
+
+      // raw pointer velocity (px/frame → smoothed)
+      const dx = pos.x - pos.rx
+      const dy = pos.y - pos.ry
+      const v = Math.hypot(dx, dy) / Math.max(dt, 0.001) * 0.016
+      vel.sv = damp(vel.sv, v, 12, dt)
+      if (v > 1.2) {
+        const targetAng = Math.atan2(dy, dx)
+        // take the shortest angular path
+        let da = targetAng - vel.ang
+        while (da > Math.PI) da -= Math.PI * 2
+        while (da < -Math.PI) da += Math.PI * 2
+        vel.ang = vel.ang + da * 0.35
+      }
+      vel.sx = damp(vel.sx, Math.min(vel.sv * 0.012, 0.34), 10, dt)
+
+      pos.rx += dx * 0.16
+      pos.ry += dy * 0.16
+      pos.px = damp(pos.px, pos.x, 9, dt)
+      pos.py = damp(pos.py, pos.y, 9, dt)
+
+      const big = useExperienceStore.getState().cursorType !== 'default'
+
+      // INTRO name plate — visible only inside the intro beat
+      const sf = getScrollState().sceneFloat
+      const ready = useExperienceStore.getState().ready
+      const wantPlate = ready && sf < 0.62 && !big && !state.hidden
+      state.pop = damp(state.pop, wantPlate ? 1 : 0, wantPlate ? 7 : 5, dt)
+
+      const pressK = state.pressed ? 0.78 : 1
+
+      if (dot.current) {
+        dot.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%,-50%) scale(${(big ? 0 : 1) * pressK})`
+        dot.current.style.opacity = state.hidden ? '0' : big ? '0' : '1'
+      }
+      if (ring.current) {
+        // stretch along the motion vector; keep the label upright when "big"
+        const stretch = big || state.pressed ? 0 : vel.sx
+        const rot = stretch > 0.02 ? (vel.ang * 180) / Math.PI : 0
+        const sx = (1 + stretch) * pressK
+        const sy = (1 - stretch * 0.45) * pressK
+        ring.current.style.transform = `translate3d(${pos.rx}px, ${pos.ry}px, 0) translate(-50%,-50%) rotate(${rot}deg) scale(${sx}, ${sy})`
+        ring.current.style.opacity = state.hidden ? '0' : '1'
+      }
+      if (plate.current) {
+        // the plate lags behind with its own heavier inertia + speed tilt
+        const tilt = Math.max(-8, Math.min(8, dx * 0.22))
+        plate.current.style.transform = `translate3d(${pos.px + 26}px, ${pos.py + 30}px, 0) rotate(${tilt}deg) scale(${0.92 + state.pop * 0.08})`
+        plate.current.style.opacity = state.pop.toFixed(3)
+      }
+
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
+
     window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('pointerdown', onDown, { passive: true })
+    window.addEventListener('pointerup', onUp, { passive: true })
+    window.addEventListener('click', onClick, { passive: true })
+    document.addEventListener('mouseleave', onLeave)
+    document.addEventListener('mouseenter', onEnter)
 
     // contextual hover states via event delegation
     const onOver = (e: Event) => {
@@ -61,14 +164,19 @@ export default function CustomCursor() {
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('click', onClick)
+      document.removeEventListener('mouseleave', onLeave)
+      document.removeEventListener('mouseenter', onEnter)
       document.removeEventListener('mouseover', onOver)
       document.removeEventListener('mouseout', onOut)
       document.documentElement.classList.remove('has-custom-cursor')
     }
   }, [])
 
-  const cursorType = useExperienceStore((s) => s.cursorType)
   const cursorLabel = useExperienceStore((s) => s.cursorLabel)
+  const cursorType = useExperienceStore((s) => s.cursorType)
 
   if (!enabled) return null
 
@@ -76,27 +184,31 @@ export default function CustomCursor() {
 
   return (
     <>
+      <div ref={pingHost} className="pointer-events-none fixed inset-0 z-[198]" aria-hidden="true" />
+
       <div
         ref={dot}
-        className="pointer-events-none fixed left-0 top-0 z-[200] h-[5px] w-[5px] rounded-full bg-white mix-blend-difference transition-opacity duration-300"
-        style={{ opacity: big ? 0 : 1 }}
+        className="cursor-dot-idle pointer-events-none fixed left-0 top-0 z-[200] h-[5px] w-[5px] rounded-full bg-white mix-blend-difference"
+        style={{ opacity: 0 }}
+        aria-hidden="true"
       />
       <div
         ref={ring}
         className="pointer-events-none fixed left-0 top-0 z-[199] flex items-center justify-center rounded-full border border-white/70 mix-blend-difference transition-[width,height,background-color,border-color] duration-300 ease-out"
-        style={{
-          width: big ? 64 : 30,
-          height: big ? 64 : 30,
-          backgroundColor: big ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0)',
-        }}
+        style={{ width: big ? 64 : 30, height: big ? 64 : 30, backgroundColor: big ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0)', opacity: 0 }}
+        aria-hidden="true"
       >
-        <span
-          ref={label}
-          className="select-none font-mono text-[9px] font-semibold tracking-[0.18em] text-black transition-opacity duration-200"
-          style={{ opacity: big && cursorLabel ? 1 : 0 }}
-        >
+        <span className="select-none font-mono text-[9px] font-semibold tracking-[0.18em] text-black transition-opacity duration-200" style={{ opacity: big && cursorLabel ? 1 : 0 }}>
           {cursorLabel}
         </span>
+      </div>
+
+      {/* the name cursor — intro signature */}
+      <div ref={plate} className="cursor-plate pointer-events-none fixed left-0 top-0 z-[197]" style={{ opacity: 0 }} aria-hidden="true">
+        <div className="cursor-plate-inner flex items-center gap-2 rounded-full border border-white/15 bg-white/95 py-1.5 pl-2.5 pr-3.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#bef264] shadow-[0_0_8px_#bef264]" />
+          <span className="font-mono text-[9px] font-semibold tracking-[0.3em] text-black">WESLEY SAMUVEL</span>
+        </div>
       </div>
     </>
   )

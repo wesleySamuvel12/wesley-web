@@ -148,7 +148,7 @@ function WaterSurface() {
 /** PROJECT 03 — HydroFloat: above the surface, then diving beneath it */
 export default function HydroScene() {
   // exit early — the embedded lab owns the space after the dive
-  const group = useSceneVisibility(IDX, 0.05, 0.9)
+  const group = useSceneVisibility(IDX)
   const buoy = useRef<THREE.Group>(null)
   const beacon = useRef<THREE.Mesh>(null)
   const shafts = useRef<THREE.Group>(null)

@@ -82,7 +82,11 @@ function BrowserWindow({ product, index }: { product: WebProduct; index: number 
       }}
       onClick={(e) => {
         e.stopPropagation()
+        // INSPECT = navigate: clicking / touching a live product window
+        // opens the real deployed site in a new tab AND zooms in for the
+        // inspect card (auto-returns to normal view after a few seconds)
         setFocusedWeb(product.id)
+        window.open(product.url, '_blank', 'noopener,noreferrer')
         setCursor('default')
       }}
     >

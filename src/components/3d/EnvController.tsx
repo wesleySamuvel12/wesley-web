@@ -6,10 +6,6 @@ import { useFrame } from '@react-three/fiber'
 import { SCENES } from '@/lib/scenes'
 import { envBus, UNDERWATER_BG, UNDERWATER_DENSITY } from '@/lib/envBus'
 import { getScrollState } from '@/lib/scrollEngine'
-import { clamp01, easeInOut } from '@/lib/scenes'
-
-const _a = new THREE.Color()
-const _b = new THREE.Color()
 
 /**
  * Applies background + fog to the scene every frame.
@@ -22,14 +18,12 @@ export default function EnvController() {
   useFrame(({ scene }, delta) => {
     const s = getScrollState()
     const i = Math.min(s.sceneIndex, SCENES.length - 1)
-    const next = SCENES[Math.min(i + 1, SCENES.length - 1)]
-    const t = easeInOut(clamp01(s.sceneLocal))
 
-    _a.set(SCENES[i].bg)
-    _b.set(next.bg)
-    envBus.cur.copy(_a).lerp(_b, t)
-
-    const dBase = SCENES[i].fog + (next.fog - SCENES[i].fog) * t
+    // hard film cuts: the environment belongs to exactly ONE scene at a time.
+    // It snaps at the boundary while the SceneDip overlay masks the swap —
+    // no cross-scene colour blending, nothing "mixes" while scrolling.
+    envBus.cur.set(SCENES[i].bg)
+    const dBase = SCENES[i].fog
 
     envBus.underwaterMix = THREE.MathUtils.damp(envBus.underwaterMix, envBus.underwater ? 1 : 0, 2.4, Math.min(delta, 0.05))
     const m = envBus.underwaterMix

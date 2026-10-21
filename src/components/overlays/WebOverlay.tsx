@@ -22,7 +22,7 @@ export default function WebOverlay() {
           LIVE <span className="text-[#bef264]">PRODUCTS</span>
         </h2>
         <p data-reveal className="mt-4 font-mono text-[9px] tracking-[0.32em] text-white/40">
-          {product ? 'INSPECTING —' : 'REAL SITES · CLICK A WINDOW TO INSPECT'}
+          {product ? 'INSPECTING —' : 'REAL SITES · TAP A WINDOW — INSPECT + OPEN URL'}
         </p>
       </div>
 

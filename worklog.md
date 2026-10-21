@@ -123,3 +123,25 @@ Stage Summary:
 - Embedded lab is now a clickable hardware components explorer (6 parts, real specs)
 - Subtree raycast blocking in useSceneVisibility is the global fix for cross-scene event theft — applies to any future interactive scene
 - Tuning surfaces: store.ts FOCUS_RETURN_MS, hardwareLayout.ts poses, webLayout.ts displays/poses, data/web.ts, data/hardware.ts
+
+---
+Task ID: 13
+Agent: main (Z.ai Code)
+Task: "Named realistic cursor in intro + INSPECT navigates URL + hard scene separation while scrolling (no mixing)"
+
+Work Log:
+- HARD FILM CUTS (no mixing): useSceneVisibility rewritten to non-overlapping windows — scene i mounts ONLY while sceneFloat ∈ [i-0.012, i+1-0.012) (pad shifts the swap while the dip is ~86% opaque); removed the old asymmetric overlap (buffer 0.4 / exit 1.12) that let two scenes share the frame; Hydro/Embedded/Attendance call sites normalized (staggered-buffer hacks obsolete)
+- boundaryDip(sf) added to scenes.ts (CUT_WIDTH 0.085, capped 0.985, skips track start/end) + new SceneDip.tsx DOM overlay (z-15, above canvas, below text) mounted in ExperienceShell — dips to near-black around every integer boundary, masking the swap like a film cut
+- CameraController: when dip > 0.9 the camera SNAPS to the incoming scene's opening keyframe (curPos/curLook/curFov) instead of damping across two worlds; inside the dip zone damping λ scales up (2.6 → 16.6) so the rig settles before the frame clears
+- EnvController: removed cross-scene bg/fog lerp (was blending scene i → i+1 colors across the whole beat); environment now belongs to exactly one scene and snaps under the dip
+- Scroll realism: velocity-driven FOV kick (≤3°), dolly pull-back along view axis (≤0.4), and damped micro-roll (±0.02 rad) tied to scroll direction
+- INSPECT = NAVIGATE: WebScene BrowserWindow onClick now window.open(product.url, '_blank', 'noopener,noreferrer') in addition to the focus zoom — touch and mouse both navigate to the real site; WebOverlay hint updated to "TAP A WINDOW — INSPECT + OPEN URL"
+- NAME CURSOR (realistic): CustomCursor rebuilt as a physical rig — 1:1 dot (idle breath), spring-lagged ring with velocity stretch + motion-vector banking (rotate/scale), press compression, one-shot click ripple, mouseleave fade; during the INTRO (sceneFloat < 0.62) a "WESLEY SAMUVEL" name plate (white pill + lime dot, drop shadow) glides behind the cursor on its own heavier spring with speed tilt, fading out past the intro and over interactive [data-cursor] targets; globals.css: .cursor-plate/.cursor-ping/.cursor-dot-idle
+- Verified via agent-browser: dip element probe (opacity 0.973 applied at forced boundary sf=1.999, bright PCB fully masked), real wheel scroll across intro→hero lands hero fully formed with zero intro residue (no headline mixing), name plate visible in intro + gone in hero, MS Project window click → new tab https://msproject.space-z.ai/ (live, Gantt renders), IQAC window click → new tab https://iqac-portals.vercel.app/ (live), focus zoom armed then auto-returned to normal view after 7s (resting quick-links back), tech constellation click/hover regression OK, mobile 390×844 intro + web scene framed correctly
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only, console clean (benign warnings only)
+
+Stage Summary:
+- Scene transitions are now true film cuts: one scene on screen at a time, dip-to-black masks the swap, camera snaps while dark — scrolling can never visually mix two scenes
+- INSPECT on live product windows navigates to the real URL (touch + mouse) while still zooming for the auto-returning inspect card
+- Cursor is a realistic physical rig and carries the WESLEY SAMUVEL name plate during the intro
+- Tuning surfaces: scenes.ts CUT_WIDTH/boundaryDip, visibility.ts CUT_PAD, SceneDip z/behaviour, CustomCursor spring rates + plate threshold (0.62), webLayout poses

@@ -3,7 +3,7 @@
 import * as THREE from 'three'
 import { useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { SCENES, clamp01, easeInOut } from '@/lib/scenes'
+import { SCENES, clamp01, easeInOut, boundaryDip } from '@/lib/scenes'
 import { getScrollState } from '@/lib/scrollEngine'
 import { useExperienceStore } from '@/lib/store'
 import { input, updateInput } from '@/lib/input'
@@ -18,6 +18,7 @@ const _targetLook = new THREE.Vector3()
 const _curLook = new THREE.Vector3(0, 0, 0)
 const _posePos = new THREE.Vector3()
 const _poseLook = new THREE.Vector3()
+const _dir = new THREE.Vector3()
 
 function damp3(cur: THREE.Vector3, target: THREE.Vector3, lambda: number, dt: number) {
   const k = 1 - Math.exp(-lambda * dt)
@@ -31,6 +32,7 @@ export default function CameraController() {
   const size = useThree((s) => s.size)
   const curPos = useRef(new THREE.Vector3(0, 0.15, 9))
   const curFov = useRef(42)
+  const curRoll = useRef(0)
   const focusAmt = useRef(0)
 
   useFrame((_, rawDelta) => {
@@ -53,13 +55,18 @@ export default function CameraController() {
     // portrait screens: pull the camera back and widen the lens so the
     // environments keep their framing on narrow viewports
     const aspect = size.width / Math.max(1, size.height)
-    let fovBoost = 0
+    let targetFov = cfg.cam.from.fov + (cfg.cam.to.fov - cfg.cam.from.fov) * t
     if (aspect < 0.85) {
       _targetPos.sub(_targetLook).multiplyScalar(1.62).add(_targetLook)
-      fovBoost = 10
+      targetFov += 10
     }
 
-    const targetFov = cfg.cam.from.fov + (cfg.cam.to.fov - cfg.cam.from.fov) * t + fovBoost
+    // scroll realism — the lens reacts to scroll speed like a physical rig:
+    // a gentle FOV kick and a short dolly pull-back along the view axis
+    const speed = Math.min(Math.abs(s.velocity), 60)
+    targetFov += speed * 0.05
+    camera.getWorldDirection(_dir)
+    _targetPos.addScaledVector(_dir, -Math.min(speed * 0.006, 0.4))
 
     // click-focus zooms: creative gallery display / live web window / lab component.
     // Only one kind can be armed at a time (the store clears siblings).
@@ -84,11 +91,30 @@ export default function CameraController() {
     _targetLook.x += input.mx * 0.42
     _targetLook.y += -input.my * 0.26
 
-    damp3(curPos.current, _targetPos, 2.6, delta)
-    damp3(_curLook, _targetLook, 2.6, delta)
+    // HARD FILM CUT — near a scene boundary the dip-to-black overlay is up,
+    // so instead of damping across two worlds (which would visually mix the
+    // outgoing and incoming scenes) the camera snaps while the frame is dark.
+    const dip = boundaryDip(s.sceneFloat)
+    if (dip > 0.9) {
+      curPos.current.copy(_targetPos)
+      _curLook.copy(_targetLook)
+      curFov.current = targetFov
+      curRoll.current = 0
+    } else {
+      // higher damping while inside the dip zone → the rig settles into the
+      // new scene before the frame clears, so no residue is ever visible
+      const lambda = 2.6 + dip * 14
+      damp3(curPos.current, _targetPos, lambda, delta)
+      damp3(_curLook, _targetLook, lambda, delta)
+    }
 
     camera.position.copy(curPos.current)
     camera.lookAt(_curLook)
+
+    // micro roll — a whisper of banking tied to scroll direction
+    const rollTarget = special ? 0 : THREE.MathUtils.clamp(-s.velocity * 0.0006, -0.02, 0.02)
+    curRoll.current = THREE.MathUtils.damp(curRoll.current, rollTarget, 2.8, delta)
+    if (Math.abs(curRoll.current) > 0.00005) camera.rotateZ(curRoll.current)
 
     const cam = camera as THREE.PerspectiveCamera
     if (Math.abs(cam.fov - targetFov) > 0.005) {

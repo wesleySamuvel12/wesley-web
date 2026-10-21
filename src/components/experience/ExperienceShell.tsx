@@ -23,6 +23,7 @@ import ContactOverlay from '@/components/overlays/ContactOverlay'
 import Loader from '@/components/navigation/Loader'
 import { Navigation, SectionIndicator } from '@/components/navigation/Navigation'
 import ErrorBoundary from './ErrorBoundary'
+import SceneDip from './SceneDip'
 
 const Stage = dynamic(() => import('@/components/3d/Stage'), { ssr: false })
 const CustomCursor = dynamic(() => import('@/components/ui/CustomCursor'), { ssr: false })
@@ -81,6 +82,9 @@ export default function ExperienceShell() {
           <ErrorBoundary>
             {mounted && <Stage />}
           </ErrorBoundary>
+
+          {/* film-cut dip — masks scene swaps so nothing mixes while scrolling */}
+          <SceneDip />
 
           {/* overlays — container lets events fall through to the canvas */}
           <div className="pointer-events-none absolute inset-0 z-20">

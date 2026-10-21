@@ -15,7 +15,7 @@ const IDX = SCENES.findIndex((s) => s.id === 'attendance')
 /** PROJECT 02 — Smart Attendance: campus gate with face-scan + QR + geofence */
 export default function AttendanceScene() {
   // exit early — HydroFloat occupies the same world space right after this scene
-  const group = useSceneVisibility(IDX, 0.4, 0.98)
+  const group = useSceneVisibility(IDX)
   const scanLine = useRef<THREE.Mesh>(null)
   const face = useRef<THREE.Mesh>(null)
   const geoRing = useRef<THREE.Mesh>(null)

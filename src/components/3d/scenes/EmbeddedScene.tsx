@@ -82,7 +82,7 @@ function HwComponent({
 /** PROJECT 04 — Embedded Intelligence: the futuristic electronics laboratory */
 export default function EmbeddedScene() {
   // enter late — must not bleed into the HydroFloat dive above it
-  const group = useSceneVisibility(IDX, 0.12)
+  const group = useSceneVisibility(IDX)
   const horn = useRef<THREE.Mesh>(null)
   const fan = useRef<THREE.Group>(null)
   const schematic = useRef<THREE.Group>(null)

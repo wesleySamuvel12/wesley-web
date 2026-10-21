@@ -331,3 +331,57 @@
     animation: none;
   }
 }
+
+/* ---------------------------------- */
+/* realistic custom cursor            */
+/* ---------------------------------- */
+
+/* name plate — "WESLEY SAMUVEL" tag gliding behind the cursor in the intro */
+.cursor-plate {
+  will-change: transform, opacity;
+  transition: filter 0.3s ease;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+}
+.cursor-plate-inner {
+  animation: plateIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes plateIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* one-shot ripple on click */
+.cursor-ping {
+  animation: cursorPing 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes cursorPing {
+  from {
+    opacity: 0.65;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.7);
+  }
+}
+
+/* cursor breathes while idle so it never reads as a static sprite */
+@keyframes cursorBreath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+.cursor-dot-idle {
+  animation: cursorBreath 2.6s ease-in-out infinite;
+}
+

@@ -1,9 +1,10 @@
 'use client'
 
 import * as THREE from 'three'
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { getScrollState } from '@/lib/scrollEngine'
+import { SCENES } from '@/lib/scenes'
 
 /**
  * r3f raycasts objects with handlers even when they are invisible, and it
@@ -31,18 +32,29 @@ function setSubtreeRaycast(root: THREE.Object3D, blocked: boolean) {
 }
 
 /**
- * Toggles a group's visibility based on how close the camera timeline is to
- * this scene. Asymmetric window: appears in the final ~40% of the previous
- * scene and stays until ~42% into the next one. While hidden the whole group
- * is non-raycastable so it can never steal pointer events.
+ * HARD FILM CUTS — scenes never share the frame.
+ * Scene i is mounted ONLY while the camera timeline is inside its own beat
+ * (sceneFloat ∈ [i - pad, i + 1 - pad)). The tiny `pad` shifts the swap a
+ * hair BEFORE the boundary so the SceneDip overlay is still ~86% opaque when
+ * content swaps — the cut is fully masked, nothing ever "mixes" with the
+ * next scene while scrolling. The last scene stays mounted to the absolute
+ * end of the track. While hidden the whole group is non-raycastable so it
+ * can never steal pointer events.
  */
-export function useSceneVisibility(index: number, buffer = 0.4, exit = 1.12) {
+const CUT_PAD = 0.012
+
+function isActive(index: number, sf: number): boolean {
+  if (sf < index - CUT_PAD) return false
+  if (index === SCENES.length - 1) return sf <= index + 1
+  return sf < index + 1 - CUT_PAD
+}
+
+export function useSceneVisibility(index: number) {
   const ref = useRef<THREE.Group>(null)
   useFrame(() => {
     const g = ref.current
     if (!g) return
-    const sf = getScrollState().sceneFloat
-    const active = sf > index - buffer && sf < index + exit
+    const active = isActive(index, getScrollState().sceneFloat)
     if (g.visible !== active) {
       g.visible = active
       setSubtreeRaycast(g, !active)
@@ -52,7 +64,6 @@ export function useSceneVisibility(index: number, buffer = 0.4, exit = 1.12) {
 }
 
 /** Stable per-frame visibility check for use inside other useFrame callbacks */
-export function isSceneActive(index: number, buffer = 0.4): boolean {
-  const sf = getScrollState().sceneFloat
-  return sf > index - buffer && sf < index + 1.32
+export function isSceneActive(index: number): boolean {
+  return isActive(index, getScrollState().sceneFloat)
 }
