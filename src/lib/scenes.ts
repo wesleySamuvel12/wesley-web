@@ -151,6 +151,18 @@ export const SCENES: SceneConfig[] = [
     overlay: { fadeIn: 0.06, fadeOut: 0.85, parallax: 65 },
   },
   {
+    id: 'web',
+    label: 'WEB PRODUCTS',
+    duration: 240,
+    cam: {
+      from: { pos: [-3.1, 1.0, 5.4], look: [-0.9, 0.2, 0], fov: 42 },
+      to: { pos: [2.7, 0.8, 4.3], look: [0.9, 0.15, 0], fov: 42 },
+    },
+    bg: '#070809',
+    fog: 0.042,
+    overlay: { fadeIn: 0.06, fadeOut: 0.84, parallax: 55 },
+  },
+  {
     id: 'stats',
     label: 'PERFORMANCE',
     duration: 170,
@@ -227,10 +239,11 @@ export const INDICATOR: IndicatorItem[] = [
   { n: '04', label: 'ABOUT', scene: 3 },
   { n: '05', label: 'TECH', scene: 4 },
   { n: '06', label: 'WORK', scene: 5 },
-  { n: '07', label: 'STATS', scene: 10 },
-  { n: '08', label: 'GALLERY', scene: 11 },
-  { n: '09', label: 'JOURNEY', scene: 12 },
-  { n: '10', label: 'CONTACT', scene: 13 },
+  { n: '07', label: 'WEB', scene: 10 },
+  { n: '08', label: 'STATS', scene: 11 },
+  { n: '09', label: 'GALLERY', scene: 12 },
+  { n: '10', label: 'JOURNEY', scene: 13 },
+  { n: '11', label: 'CONTACT', scene: 14 },
 ]
 
 /** Which indicator entry a given scene index belongs to */

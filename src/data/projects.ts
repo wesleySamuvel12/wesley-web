@@ -40,7 +40,7 @@ export const PROJECTS: Project[] = [
     category: 'FULL-STACK · AI',
     technologies: ['NEXT.JS', 'NODE.JS', 'GEMINI AI', 'WHATSAPP API', 'FIREBASE'],
     image: '/images/projects/koottam.png',
-    // TODO: wire real repository / live URLs
+    // live repo / demo URLs are wired only when a real one exists (see isRealUrl)
     github: 'https://github.com/',
     demo: 'https://github.com/',
     stats: [

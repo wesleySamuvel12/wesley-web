@@ -102,8 +102,25 @@ export default function Stage() {
         w.__r3fscene = scene
         w.__r3fgl = gl
         w.__r3fstore = useExperienceStore
+        // dev probe: list what a screen-space ray hits (x/y in CSS pixels)
+        const probe = new THREE.Raycaster()
+        const probeV = new THREE.Vector2()
+        w.__r3fray = (x: number, y: number) => {
+          const el = gl.domElement
+          const r = el.getBoundingClientRect()
+          probeV.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
+          probe.setFromCamera(probeV, camera)
+          return probe
+            .intersectObjects(scene.children, true)
+            .slice(0, 8)
+            .map((h) => ({ t: h.object.type, d: +h.distance.toFixed(2), vis: h.object.visible }))
+        }
       }}
       style={{ position: 'absolute', inset: 0 }}
+      onPointerMissed={() => {
+        // clicking empty space returns any focused element to its normal view
+        useExperienceStore.getState().clearFocus()
+      }}
     >
       <FpsGovernor />
       <color attach="background" args={['#050505']} />

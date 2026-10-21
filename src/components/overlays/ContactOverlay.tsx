@@ -15,7 +15,7 @@ const FOOTER_LINKS = [
 /** FINAL SCENE — CTA + minimal editorial footer with giant ghost branding */
 export default function ContactOverlay() {
   return (
-    <SceneOverlay index={13} className="flex items-center">
+    <SceneOverlay index={14} className="flex items-center">
       <div className="w-full px-6 pb-36 pt-6 sm:px-12 md:px-16 md:pb-40 lg:px-20">
         <h2 className="font-display font-bold leading-[0.92] tracking-[-0.02em] text-white text-[clamp(2.8rem,8vw,7.8rem)]">
           <span data-reveal className="block">LET&apos;S BUILD</span>

@@ -1,18 +1,19 @@
 'use client'
 
 import SceneOverlay from './SceneOverlay'
-import { Eyebrow, MagneticButton } from '@/components/ui/experience-ui'
+import { Eyebrow, MagneticButton, AutoReturnBar } from '@/components/ui/experience-ui'
 import { CREATIVE_WORKS } from '@/data/content'
 import { useExperienceStore } from '@/lib/store'
 
-/** SCENE 08 — creative gallery HUD + focus inspector */
+/** SCENE 09 — creative gallery HUD + focus inspector */
 export default function CreativeOverlay() {
   const focusedId = useExperienceStore((s) => s.focusedCreative)
+  const focusReturnAt = useExperienceStore((s) => s.focusReturnAt)
   const setFocusedCreative = useExperienceStore((s) => s.setFocusedCreative)
   const work = CREATIVE_WORKS.find((w) => w.id === focusedId) ?? null
 
   return (
-    <SceneOverlay index={11}>
+    <SceneOverlay index={12}>
       <div className="absolute left-6 top-[13%] sm:left-12 md:left-16 lg:left-20">
         <Eyebrow data-reveal className="!justify-start">
           CREATIVE WORK — 08
@@ -23,6 +24,11 @@ export default function CreativeOverlay() {
         <p data-reveal className="mt-4 font-mono text-[9px] tracking-[0.32em] text-white/40">
           {work ? 'INSPECTING —' : 'HOVER A DISPLAY · CLICK TO INSPECT'}
         </p>
+        {!work && (
+          <p data-reveal className="mt-2 font-mono text-[8px] tracking-[0.26em] text-white/25">
+            FOCUS AUTO-RETURNS AFTER 7S
+          </p>
+        )}
       </div>
 
       {work && (
@@ -43,6 +49,9 @@ export default function CreativeOverlay() {
             <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
               <span className="font-mono text-[8px] tracking-[0.22em] text-white/35">{work.tools}</span>
               <span className="font-mono text-[8px] tracking-[0.22em] text-[#bef264]">WS-ARCHIVE</span>
+            </div>
+            <div className="mt-3.5">
+              <AutoReturnBar returnAt={focusReturnAt} />
             </div>
           </div>
         </div>

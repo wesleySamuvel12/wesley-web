@@ -1,13 +1,14 @@
 'use client'
 
 import * as THREE from 'three'
-import { useMemo, useRef, useEffect, useLayoutEffect } from 'react'
+import { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import { SCENES } from '@/lib/scenes'
 import { useSceneVisibility } from '../shared/visibility'
 import { Label3D, GlowSprite } from '../shared/Label3D'
 import ParticleField from '../shared/ParticleField'
+import { useExperienceStore } from '@/lib/store'
 import {
   createScreenTexture,
   createSchematicTexture,
@@ -21,6 +22,61 @@ const BENCH_TOP = -0.55
 function makeWire(points: THREE.Vector3[], color: string): THREE.TubeGeometry {
   const curve = new THREE.CatmullRomCurve3(points)
   return new THREE.TubeGeometry(curve, 32, 0.007, 6, false)
+}
+
+/**
+ * Interactive bench component: hover lifts + cursor hint, click focuses the
+ * camera on it and opens the spec card (auto-returns after a few seconds).
+ */
+function HwComponent({
+  id,
+  position,
+  rotation,
+  children,
+}: {
+  id: string
+  position: [number, number, number]
+  rotation?: [number, number, number]
+  children: React.ReactNode
+}) {
+  const ref = useRef<THREE.Group>(null)
+  const [hovered, setHovered] = useState(false)
+  const setCursor = useExperienceStore((s) => s.setCursor)
+  const setFocusedHardware = useExperienceStore((s) => s.setFocusedHardware)
+
+  useFrame((_, delta) => {
+    const g = ref.current
+    if (!g) return
+    const isFocused = useExperienceStore.getState().focusedHardware === id
+    const target = hovered || isFocused ? 1.09 : 1
+    const k = 1 - Math.exp(-9 * delta)
+    const s = g.scale.x + (target - g.scale.x) * k
+    g.scale.setScalar(s)
+  })
+
+  return (
+    <group
+      ref={ref}
+      position={position}
+      rotation={rotation}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        setHovered(true)
+        setCursor('explore', 'INSPECT')
+      }}
+      onPointerOut={() => {
+        setHovered(false)
+        setCursor('default')
+      }}
+      onClick={(e) => {
+        e.stopPropagation()
+        setFocusedHardware(id)
+        setCursor('default')
+      }}
+    >
+      {children}
+    </group>
+  )
 }
 
 /** PROJECT 04 — Embedded Intelligence: the futuristic electronics laboratory */
@@ -149,7 +205,7 @@ export default function EmbeddedScene() {
       ))}
 
       {/* ESP32 devkit with pin rows */}
-      <group position={[-1.3, BENCH_TOP + 0.018, -0.1]} rotation={[0, 0.2, 0]}>
+      <HwComponent id="esp32" position={[-1.3, BENCH_TOP + 0.018, -0.1]} rotation={[0, 0.2, 0]}>
         <RoundedBox args={[0.62, 0.032, 0.36]} radius={0.012} smoothness={3}>
           <meshStandardMaterial color="#0c1418" roughness={0.5} metalness={0.4} />
         </RoundedBox>
@@ -160,7 +216,7 @@ export default function EmbeddedScene() {
           <boxGeometry args={[0.07, 0.045, 0.1]} />
           <meshStandardMaterial color="#b7bdc4" roughness={0.25} metalness={1} />
         </mesh>
-      </group>
+      </HwComponent>
       {pins.length > 0 && (
         <instancedMesh ref={pinRef} args={[undefined, undefined, pins.length]} frustumCulled={false}>
           <boxGeometry args={[0.018, 0.075, 0.018]} />
@@ -169,7 +225,7 @@ export default function EmbeddedScene() {
       )}
 
       {/* arduino-style board */}
-      <group position={[0.32, BENCH_TOP + 0.016, -0.2]} rotation={[0, -0.15, 0]}>
+      <HwComponent id="arduino" position={[0.32, BENCH_TOP + 0.016, -0.2]} rotation={[0, -0.15, 0]}>
         <RoundedBox args={[0.62, 0.03, 0.44]} radius={0.012} smoothness={3}>
           <meshStandardMaterial color="#0e3a34" roughness={0.5} metalness={0.35} />
         </RoundedBox>
@@ -189,10 +245,10 @@ export default function EmbeddedScene() {
           <boxGeometry args={[0.16, 0.012, 0.16]} />
           <meshStandardMaterial color="#0a0d10" roughness={0.4} metalness={0.6} />
         </mesh>
-      </group>
+      </HwComponent>
 
       {/* OLED standing display */}
-      <group position={[-0.42, BENCH_TOP + 0.14, 0.32]} rotation={[-0.18, 0.1, 0]}>
+      <HwComponent id="oled" position={[-0.42, BENCH_TOP + 0.14, 0.32]} rotation={[-0.18, 0.1, 0]}>
         <RoundedBox args={[0.5, 0.34, 0.04]} radius={0.015} smoothness={3}>
           <meshStandardMaterial color="#0a0d10" roughness={0.35} metalness={0.6} />
         </RoundedBox>
@@ -210,10 +266,10 @@ export default function EmbeddedScene() {
           <boxGeometry args={[0.16, 0.06, 0.1]} />
           <meshStandardMaterial color="#12161c" roughness={0.4} metalness={0.6} />
         </mesh>
-      </group>
+      </HwComponent>
 
       {/* ultrasonic sensor */}
-      <group position={[1.05, BENCH_TOP + 0.02, 0.05]} rotation={[0, -0.3, 0]}>
+      <HwComponent id="ultrasonic" position={[1.05, BENCH_TOP + 0.02, 0.05]} rotation={[0, -0.3, 0]}>
         <RoundedBox args={[0.3, 0.025, 0.2]} radius={0.01} smoothness={3}>
           <meshStandardMaterial color="#10161c" roughness={0.5} metalness={0.4} />
         </RoundedBox>
@@ -229,10 +285,10 @@ export default function EmbeddedScene() {
             </mesh>
           </group>
         ))}
-      </group>
+      </HwComponent>
 
       {/* servo with rotating horn */}
-      <group position={[1.65, BENCH_TOP + 0.1, 0.28]} rotation={[0, 0.4, 0]}>
+      <HwComponent id="servo" position={[1.65, BENCH_TOP + 0.1, 0.28]} rotation={[0, 0.4, 0]}>
         <RoundedBox args={[0.17, 0.2, 0.12]} radius={0.02} smoothness={3}>
           <meshStandardMaterial color="#2a6f6a" roughness={0.4} metalness={0.4} />
         </RoundedBox>
@@ -244,27 +300,29 @@ export default function EmbeddedScene() {
           <boxGeometry args={[0.16, 0.014, 0.02]} />
           <meshStandardMaterial color="#e8e4da" roughness={0.4} metalness={0.2} />
         </mesh>
-      </group>
+      </HwComponent>
 
       {/* DC motor + fan */}
-      <group position={[-1.9, BENCH_TOP + 0.1, 0.4]} rotation={[0, 0.3, Math.PI / 2]}>
-        <mesh>
-          <cylinderGeometry args={[0.09, 0.09, 0.22, 24]} />
-          <meshStandardMaterial color="#9aa3ab" roughness={0.25} metalness={1} />
-        </mesh>
-        <mesh position={[0, 0.14, 0]}>
-          <cylinderGeometry args={[0.015, 0.015, 0.08, 10]} />
-          <meshStandardMaterial color="#c8ccd2" roughness={0.2} metalness={1} />
-        </mesh>
-      </group>
-      <group ref={fan} position={[-1.9, BENCH_TOP + 0.24, 0.4]}>
-        {[0, 1, 2].map((i) => (
-          <mesh key={i} rotation={[0.5, (i * Math.PI * 2) / 3, 0]} position={[0, 0, 0]}>
-            <boxGeometry args={[0.11, 0.006, 0.035]} />
-            <meshStandardMaterial color="#d8dce2" roughness={0.35} metalness={0.7} transparent opacity={0.9} />
+      <HwComponent id="motor" position={[-1.9, BENCH_TOP + 0.17, 0.4]}>
+        <group position={[0, -0.07, 0]} rotation={[0, 0.3, Math.PI / 2]}>
+          <mesh>
+            <cylinderGeometry args={[0.09, 0.09, 0.22, 24]} />
+            <meshStandardMaterial color="#9aa3ab" roughness={0.25} metalness={1} />
           </mesh>
-        ))}
-      </group>
+          <mesh position={[0, 0.14, 0]}>
+            <cylinderGeometry args={[0.015, 0.015, 0.08, 10]} />
+            <meshStandardMaterial color="#c8ccd2" roughness={0.2} metalness={1} />
+          </mesh>
+        </group>
+        <group ref={fan} position={[0, 0.07, 0]}>
+          {[0, 1, 2].map((i) => (
+            <mesh key={i} rotation={[0.5, (i * Math.PI * 2) / 3, 0]} position={[0, 0, 0]}>
+              <boxGeometry args={[0.11, 0.006, 0.035]} />
+              <meshStandardMaterial color="#d8dce2" roughness={0.35} metalness={0.7} transparent opacity={0.9} />
+            </mesh>
+          ))}
+        </group>
+      </HwComponent>
 
       {/* wires */}
       {wires.map((geo, i) => (
@@ -288,6 +346,7 @@ export default function EmbeddedScene() {
       <Label3D text="TRIG / ECHO" position={[1.05, BENCH_TOP + 0.24, 0.05]} scale={0.1} mono />
       <Label3D text="ADC 12-BIT" position={[-1.3, BENCH_TOP + 0.3, -0.1]} scale={0.1} mono opacity={0.85} />
       <Label3D text="3V3 · GND · TX · RX" position={[0.32, BENCH_TOP + 0.26, -0.2]} scale={0.09} mono opacity={0.7} />
+      <Label3D text="CLICK A COMPONENT — INSPECT · AUTO RETURNS" position={[0, BENCH_TOP + 0.34, 0.95]} scale={0.085} mono opacity={0.6} accent="#a78bfa" />
 
       <ParticleField count={110} spread={[9, 5.5, 8]} size={0.02} color="#b8a8e8" opacity={0.24} speed={0.014} seed={71} />
 

@@ -9,7 +9,7 @@ const LINKS = [
   { label: 'ABOUT', scene: 3 },
   { label: 'WORK', scene: 5 },
   { label: 'TECH', scene: 4 },
-  { label: 'JOURNEY', scene: 12 },
+  { label: 'JOURNEY', scene: 13 },
 ]
 
 /** Keep the global active-indicator in sync with scroll (single source of truth) */
@@ -26,7 +26,11 @@ export function Navigation() {
   const active = useExperienceStore((s) => s.activeIndicator)
   useIndicatorSync()
 
-  const go = (scene: number) => scrollToScene(scene)
+  const go = (scene: number) => {
+    // leaving via a jump always returns the camera to its normal view
+    useExperienceStore.getState().clearFocus()
+    scrollToScene(scene)
+  }
 
   return (
     <header className="absolute inset-x-0 top-0 z-40 flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5 md:px-10">
@@ -74,7 +78,7 @@ export function Navigation() {
 
       {/* right — contact */}
       <button
-        onClick={() => go(13)}
+        onClick={() => go(14)}
         data-cursor="open"
         className="pointer-events-auto border border-white/20 px-3.5 py-1.5 font-display text-[9.5px] font-medium tracking-[0.3em] text-white/85 transition-all duration-300 hover:border-[#bef264] hover:text-[#bef264] sm:px-4"
       >
@@ -98,7 +102,10 @@ export function SectionIndicator() {
         return (
           <button
             key={item.n}
-            onClick={() => scrollToScene(item.scene)}
+            onClick={() => {
+              useExperienceStore.getState().clearFocus()
+              scrollToScene(item.scene)
+            }}
             data-cursor="open"
             className="group flex items-center gap-2 py-0.5"
             aria-label={`Go to ${item.label}`}

@@ -6,6 +6,7 @@ import { SCENES, TOTAL_DURATION } from '@/lib/scenes'
 import { initScrollEngine } from '@/lib/scrollEngine'
 import { initInput } from '@/lib/input'
 import { PROJECTS } from '@/data/projects'
+import { useExperienceStore } from '@/lib/store'
 
 import IntroOverlay from '@/components/overlays/IntroOverlay'
 import HeroOverlay from '@/components/overlays/HeroOverlay'
@@ -13,6 +14,8 @@ import IdentityOverlay from '@/components/overlays/IdentityOverlay'
 import AboutOverlay from '@/components/overlays/AboutOverlay'
 import TechOverlay from '@/components/overlays/TechOverlay'
 import ProjectOverlay from '@/components/overlays/ProjectOverlay'
+import WebOverlay from '@/components/overlays/WebOverlay'
+import HardwareOverlay from '@/components/overlays/HardwareOverlay'
 import StatsOverlay from '@/components/overlays/StatsOverlay'
 import CreativeOverlay from '@/components/overlays/CreativeOverlay'
 import JourneyOverlay from '@/components/overlays/JourneyOverlay'
@@ -46,10 +49,16 @@ export default function ExperienceShell() {
   useEffect(() => {
     const cleanupScroll = initScrollEngine()
     const cleanupInput = initInput()
+    // scrolling while an element is focused returns the camera to normal view
+    const onUserScroll = () => useExperienceStore.getState().clearFocus()
+    window.addEventListener('wheel', onUserScroll, { passive: true })
+    window.addEventListener('touchmove', onUserScroll, { passive: true })
     setMounted(true)
     return () => {
       cleanupScroll()
       cleanupInput()
+      window.removeEventListener('wheel', onUserScroll)
+      window.removeEventListener('touchmove', onUserScroll)
     }
   }, [])
 
@@ -83,6 +92,8 @@ export default function ExperienceShell() {
             {PROJECTS.map((p, i) => (
               <ProjectOverlay key={p.id} index={PROJECT_SCENES[i]} project={p} />
             ))}
+            <WebOverlay />
+            <HardwareOverlay />
             <StatsOverlay />
             <CreativeOverlay />
             <JourneyOverlay />

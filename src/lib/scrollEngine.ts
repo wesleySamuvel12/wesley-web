@@ -26,6 +26,7 @@ const listeners = new Set<Listener>()
 // debug handle (dev convenience)
 if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__ws = state
+  ;(window as unknown as Record<string, unknown>).__scrollToScene = scrollToScene
 }
 
 export function subscribeScroll(fn: Listener): () => void {

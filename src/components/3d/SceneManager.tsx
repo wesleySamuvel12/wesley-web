@@ -10,6 +10,7 @@ import AttendanceScene from './scenes/AttendanceScene'
 import HydroScene from './scenes/HydroScene'
 import EmbeddedScene from './scenes/EmbeddedScene'
 import DataScene from './scenes/DataScene'
+import WebScene from './scenes/WebScene'
 import StatsScene from './scenes/StatsScene'
 import CreativeScene from './scenes/CreativeScene'
 import JourneyScene from './scenes/JourneyScene'
@@ -32,6 +33,7 @@ export default function SceneManager() {
       <HydroScene />
       <EmbeddedScene />
       <DataScene />
+      <WebScene />
       <StatsScene />
       <CreativeScene />
       <JourneyScene />

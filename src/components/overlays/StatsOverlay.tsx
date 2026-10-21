@@ -48,7 +48,7 @@ export default function StatsOverlay() {
   }, [])
 
   return (
-    <SceneOverlay index={10}>
+    <SceneOverlay index={11}>
       <div className="absolute left-6 top-[13%] sm:left-12 md:left-16 lg:left-20">
         <Eyebrow data-reveal className="!justify-start">
           PERFORMANCE — TRACK RECORD

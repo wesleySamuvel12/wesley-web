@@ -95,3 +95,31 @@ Stage Summary:
 - Performance is now adaptive and self-managing: real GPUs → full pipeline (bloom, MSAA, envmap, beams) at 60fps; integrated GPUs → governor steps to med; software/no-GPU → lean pipeline, no composer, envmap off
 - Accuracy: indicator numbering, jump landing positions, koottam/contact typography collisions all fixed and screenshot-verified
 - Tuning surfaces: src/lib/scenes.ts (durations/cameras/indicator), Stage.tsx (TIER_DPR + governor thresholds), Effects.tsx (per-tier post stack), visibility windows in shared/visibility.ts
+
+---
+Task ID: 12
+Agent: main (Z.ai Code)
+Task: "Click → auto-return to normal view" + real website projects (IQAC Portal, MS Project clone) + hardware components
+
+Work Log:
+- Captured REAL production screenshots via agent-browser (1600×1000): public/images/web/iqac.png (AI Enabled IQAC Portal — NIET, NAAC/NIRF/AICTE badges, 4 role portals, 11 departments) and public/images/web/msproject.png (Project Manager Pro — Gantt/ribbon/AI assistant, 37 tasks · 11 resources); verified both live URLs render
+- Store: generalized focus system — focusedCreative/focusedWeb/focusedHardware + focusReturnAt + clearFocus(); single shared 7s auto-return timer (armFocus re-arms, null release disarms); any new focus clears siblings; FOCUS_RETURN_MS=7000 exported
+- Click→auto-return everywhere: creative displays (existing), new web windows, embedded lab components; AUTO RETURN depleting bar + seconds countdown (AutoReturnBar in experience-ui) shown in all three inspect cards; instant paths: CLOSE buttons, empty-canvas click (Canvas onPointerMissed), wheel/touchmove (ExperienceShell listeners), nav/indicator jumps (clearFocus in go())
+- scenes.ts: inserted 'web' scene (idx 10, 240vh, cam arc -3.1→2.7) between data and stats; INDICATOR renumbered 01-11 (07 WEB, 08 STATS, 09 GALLERY, 10 JOURNEY, 11 CONTACT); shifted hardcoded SceneOverlay indices (+1) for stats/creative/journey/contact; Navigation JOURNEY→13, CONTACT→14
+- WebScene + webLayout.ts: two floating browser windows (chrome bar, traffic lights, URL pill, real screenshot textures) with hover/click inspect; getWebPose focus zoom (window fills frame); WebOverlay: LIVE PRODUCTS HUD, film index, DEPLOYED inspect card (stats, stack chips, AutoReturnBar, OPEN LIVE SITE ↗) and resting LIVE quick-link cards with domains
+- data/web.ts: WEB_PRODUCTS with real URLs (https://iqac-portals.vercel.app/, https://msproject.space-z.ai) + accurate descriptions written from live-site inspection; isRealUrl() helper rejects placeholder links
+- Accuracy: ProjectOverlay renders VIEW CASE STUDY only when isRealUrl passes, else honest "FULL CASE FILE — ON REQUEST" tag (no more dead github.com links)
+- Hardware components ("hardware to components"): data/hardware.ts — 6 real parts with real specs (ESP32-WROOM-32, Arduino UNO R3, SSD1306 OLED, HC-SR04, SG90, N20); EmbeddedScene HwComponent wrapper — hover lift + 'explore:INSPECT' cursor + click focus on all 6 bench groups; hardwareLayout.ts camera poses per component; HardwareOverlay spec card (role, specs, pinout, AutoReturnBar) mounted globally, positioned clear of the SYSTEM CARD/stats strip
+- CameraController: unified special-focus blend — creative pose OR web pose OR hardware pose (store guarantees single focus), damped, plus mouse parallax on top
+- CRITICAL BUG FIXED: r3f raycasts objects with handlers even when invisible AND raycasts each handler-object directly (ancestors not consulted) — hidden scenes (tech/creative/about) were stealing clicks from the active scene (observed: embedded click set focusedCreative='brand'). Fix in useSceneVisibility: on toggle, setSubtreeRaycast sets raycast=()=>false on EVERY descendant (three.js stops recursion when raycast returns false) and restores prototype raycast on unhide — verified: hidden About sprites/tech nodes no longer respond, embedded clicks land
+- Debug handles added: __scrollToScene (Lenis-consistent jumps — native window.scrollTo does not reliably broadcast through Lenis), __r3fray screen-space raycast probe
+- Verified via agent-browser end-to-end: embedded ESP32 click → camera zoom + ESP32-WROOM-32 spec card + countdown → auto-return at 7s (hw null, camera back); web IQAC window click → zoom into real screenshot + DEPLOYED card + OPEN LIVE SITE (href verified https://iqac-portals.vercel.app/) → auto-return; creative 'ui' click → zoom + card (regression OK); wheel clears focus instantly; indicator numbering 01-11; mobile 390×844 intro + web scene
+- Test-harness lesson: canvas is inset by frame padding (1400×860 @ 20,20) — projections must use canvas rect, not innerWidth/Height (initial "misses" were harness error, not app error)
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only, no page errors in console
+
+Stage Summary:
+- Three click-focus systems (creative/web/hardware) share one 7-second auto-return engine with visible countdown; scroll, empty-click, CLOSE and nav jumps return instantly
+- New WEB PRODUCTS scene (07) showcases the user's two real deployed sites with real screenshots and live links
+- Embedded lab is now a clickable hardware components explorer (6 parts, real specs)
+- Subtree raycast blocking in useSceneVisibility is the global fix for cross-scene event theft — applies to any future interactive scene
+- Tuning surfaces: store.ts FOCUS_RETURN_MS, hardwareLayout.ts poses, webLayout.ts displays/poses, data/web.ts, data/hardware.ts

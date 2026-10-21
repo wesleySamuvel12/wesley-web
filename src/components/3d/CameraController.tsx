@@ -8,6 +8,8 @@ import { getScrollState } from '@/lib/scrollEngine'
 import { useExperienceStore } from '@/lib/store'
 import { input, updateInput } from '@/lib/input'
 import { getCreativePose } from './scenes/creativeLayout'
+import { getWebPose } from './scenes/webLayout'
+import { getHardwarePose } from './scenes/hardwareLayout'
 
 const _from = new THREE.Vector3()
 const _to = new THREE.Vector3()
@@ -59,14 +61,21 @@ export default function CameraController() {
 
     const targetFov = cfg.cam.from.fov + (cfg.cam.to.fov - cfg.cam.from.fov) * t + fovBoost
 
-    // creative gallery focus zoom
-    const focusId = useExperienceStore.getState().focusedCreative
-    focusAmt.current = THREE.MathUtils.damp(focusAmt.current, focusId ? 1 : 0, 3.4, delta)
-    if (focusAmt.current > 0.001 && focusId) {
-      if (getCreativePose(focusId, _posePos, _poseLook)) {
-        _targetPos.lerp(_posePos, focusAmt.current)
-        _targetLook.lerp(_poseLook, focusAmt.current)
-      }
+    // click-focus zooms: creative gallery display / live web window / lab component.
+    // Only one kind can be armed at a time (the store clears siblings).
+    const st = useExperienceStore.getState()
+    let special = false
+    if (st.focusedCreative && getCreativePose(st.focusedCreative, _posePos, _poseLook)) {
+      special = true
+    } else if (st.focusedWeb && getWebPose(st.focusedWeb, _posePos, _poseLook)) {
+      special = true
+    } else if (st.focusedHardware && getHardwarePose(st.focusedHardware, _posePos, _poseLook)) {
+      special = true
+    }
+    focusAmt.current = THREE.MathUtils.damp(focusAmt.current, special ? 1 : 0, 3.4, delta)
+    if (focusAmt.current > 0.001 && special) {
+      _targetPos.lerp(_posePos, focusAmt.current)
+      _targetLook.lerp(_poseLook, focusAmt.current)
     }
 
     // subtle mouse parallax

@@ -3,6 +3,7 @@
 import SceneOverlay from './SceneOverlay'
 import { Eyebrow, GlassCard, MagneticButton } from '@/components/ui/experience-ui'
 import type { Project } from '@/data/projects'
+import { isRealUrl } from '@/data/web'
 
 interface ProjectOverlayProps {
   index: number
@@ -120,9 +121,20 @@ export default function ProjectOverlay({ index, project }: ProjectOverlayProps) 
           ))}
         </div>
         <div data-reveal className="pointer-events-auto">
-          <MagneticButton href={project.github} external cursorLabel="VIEW" className="!px-4 !py-2 !text-[8.5px]">
-            VIEW CASE STUDY ↗
-          </MagneticButton>
+          {isRealUrl(project.demo) || isRealUrl(project.github) ? (
+            <MagneticButton
+              href={isRealUrl(project.demo) ? project.demo : project.github}
+              external
+              cursorLabel="VIEW"
+              className="!px-4 !py-2 !text-[8.5px]"
+            >
+              VIEW CASE STUDY ↗
+            </MagneticButton>
+          ) : (
+            <span className="border border-white/10 px-4 py-2 font-mono text-[8px] tracking-[0.24em] text-white/35">
+              FULL CASE FILE — ON REQUEST
+            </span>
+          )}
         </div>
       </div>
     </SceneOverlay>

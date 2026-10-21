@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, ReactNode } from 'react'
+import { useRef, useCallback, useEffect, useState, ReactNode } from 'react'
 import gsap from 'gsap'
 import { cn } from '@/lib/utils'
 import { useExperienceStore } from '@/lib/store'
@@ -165,6 +165,61 @@ export function Eyebrow({ children, className, ...rest }: { children: ReactNode;
     >
       <span className="inline-block h-[5px] w-[5px] rounded-full bg-[#bef264] shadow-[0_0_8px_rgba(190,242,100,0.9)]" />
       {children}
+    </div>
+  )
+}
+
+/**
+ * Depleting bar + seconds counter shown while an element is focused.
+ * Communicates that the view automatically returns to normal.
+ * Remount (via key) or change `returnAt` to restart the countdown.
+ */
+export function AutoReturnBar({
+  returnAt,
+  duration = 7000,
+  accent = '#bef264',
+  className,
+}: {
+  returnAt: number | null
+  duration?: number
+  accent?: string
+  className?: string
+}) {
+  const bar = useRef<HTMLDivElement>(null)
+  const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil(((returnAt ?? 0) - Date.now()) / 1000)))
+
+  useEffect(() => {
+    const el = bar.current
+    if (!el) return
+    const total = Math.max(0, (returnAt ?? 0) - Date.now())
+    if (total <= 0) {
+      el.style.transition = 'none'
+      el.style.width = '0%'
+      setRemaining(0)
+      return
+    }
+    el.style.transition = 'none'
+    el.style.width = '100%'
+    const raf = requestAnimationFrame(() => {
+      el.style.transition = `width ${total}ms linear`
+      el.style.width = '0%'
+    })
+    const iv = window.setInterval(() => {
+      setRemaining(Math.max(0, Math.ceil(((returnAt ?? 0) - Date.now()) / 1000)))
+    }, 250)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearInterval(iv)
+    }
+  }, [returnAt])
+
+  return (
+    <div className={cn('flex items-center gap-2.5', className)}>
+      <span className="font-mono text-[7.5px] tracking-[0.26em] text-white/35">AUTO RETURN</span>
+      <div className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-white/10">
+        <div ref={bar} className="absolute inset-y-0 left-0 rounded-full" style={{ backgroundColor: accent, width: '100%' }} />
+      </div>
+      <span className="w-4 text-right font-mono text-[7.5px] tracking-[0.1em] text-white/45">{remaining}s</span>
     </div>
   )
 }
