@@ -408,6 +408,39 @@
   animation: cursorBreath 2.6s ease-in-out infinite;
 }
 
+/* glowing star cursor — slow spin + gentle twinkle, layered bloom */
+.cursor-star-spin {
+  animation: starSpin 7s linear infinite;
+}
+.cursor-star-svg {
+  display: block;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 11px rgba(190, 242, 100, 0.65))
+    drop-shadow(0 0 24px rgba(103, 232, 249, 0.32));
+  animation: starTwinkle 2.4s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes starSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes starTwinkle {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.16);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor-star-spin,
+  .cursor-star-svg {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Mobile optimization — same look, far cheaper to render              */
 /* backdrop blur / blend modes / perpetual float loops are the most    */

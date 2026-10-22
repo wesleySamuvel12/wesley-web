@@ -5,21 +5,20 @@ import { useExperienceStore } from '@/lib/store'
 import { getScrollState } from '@/lib/scrollEngine'
 
 /**
- * Custom cursor — a small physical rig, not a static sprite:
- *  · dot      — follows the pointer 1:1, breathes while idle
- *  · ring     — trails on a spring, stretches along its motion vector and
- *               banks into direction changes (velocity-driven rotate/scale)
- *  · name     — during the INTRO the signature "WESLEY SAMUVEL" plate glides
- *               behind the cursor with its own heavier lag, tilting with speed
- *  · press    — pressing compresses the rig; release fires a one-shot ripple
- * Contextual labels (VIEW / INSPECT / OPEN) still take over on interactive
- * targets.
+ * Custom cursor — a glowing star that drags a glowing comet tail.
  *
- * TOUCH REVEAL — on phones/tablets the same rig is reused as a touch reveal:
- * the rig materialises under the fingertip, follows it with a fast spring
- * (snappy, never sluggish), grows + reveals its label over [data-cursor]
- * targets, and dissolves a beat after lift-off. The intro name plate glides
- * behind the finger exactly like the desktop cursor.
+ *  · star     — a 4-point sparkle with a layered white/lime/cyan bloom,
+ *               slowly spinning + twinkling; compresses on press
+ *  · tail     — a canvas comet ribbon (glow pass + bright core) that fades
+ *               white → lime → cyan and sheds tiny sparkles with speed
+ *  · burst    — clicks explode a small radial firework of sparks
+ *  · ring     — contextual label rig (VIEW / INSPECT / OPEN) on interactive
+ *               targets; the star tucks inside it
+ *  · name     — during the INTRO the "WESLEY SAMUVEL" plate glides behind
+ *               the cursor with its own heavier lag
+ *
+ * TOUCH REVEAL — the same star + tail + sparkles follow the fingertip with
+ * fast springs, materialise on touch and dissolve after lift-off.
  */
 
 const damp = (cur: number, target: number, lambda: number, dt: number) =>
@@ -27,10 +26,165 @@ const damp = (cur: number, target: number, lambda: number, dt: number) =>
 
 type Mode = 'none' | 'mouse' | 'touch'
 
+/* tail colour ramp: k=1 head (white) → k≈0.6 (lime) → k=0 tail (cyan) */
+function tailColor(k: number): [number, number, number] {
+  if (k > 0.62) {
+    const t = (k - 0.62) / 0.38
+    return [Math.round(190 + 65 * t), Math.round(242 + 13 * t), Math.round(100 + 155 * t)]
+  }
+  const t = k / 0.62
+  return [Math.round(103 + 87 * t), Math.round(232 + 10 * t), Math.round(249 - 149 * t)]
+}
+
+const SPARK_COLORS: [number, number, number][] = [
+  [255, 255, 255],
+  [190, 242, 100],
+  [103, 232, 249],
+]
+
+interface Spark {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  life: number
+  max: number
+  size: number
+  c: [number, number, number]
+}
+
+/** glowing comet tail — shared by the mouse and touch rigs */
+function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
+  const ctx = canvas.getContext('2d')
+  const dpr = Math.min(1.5, window.devicePixelRatio || 1)
+
+  const resize = () => {
+    canvas.width = Math.round(window.innerWidth * dpr)
+    canvas.height = Math.round(window.innerHeight * dpr)
+  }
+  resize()
+  window.addEventListener('resize', resize)
+
+  const LIFE = 0.8 // seconds a tail segment stays alive
+  const pts: { x: number; y: number; t: number }[] = []
+  const sparks: Spark[] = []
+
+  const spawnSpark = (x: number, y: number, speed: number) => {
+    if (reduced || sparks.length > 80) return
+    const a = Math.random() * Math.PI * 2
+    const sp = 18 + Math.random() * 70
+    sparks.push({
+      x: x + (Math.random() - 0.5) * 5,
+      y: y + (Math.random() - 0.5) * 5,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp - 22,
+      life: 0,
+      max: 0.4 + Math.random() * 0.55,
+      size: 0.7 + Math.random() * 1.7,
+      c: SPARK_COLORS[Math.random() < 0.45 ? 0 : Math.random() < 0.6 ? 1 : 2],
+    })
+  }
+
+  const push = (x: number, y: number, speed: number, now: number) => {
+    pts.push({ x, y, t: now })
+    if (pts.length > 44) pts.shift()
+    if (speed > 1.4 && Math.random() < Math.min(0.85, speed * 0.032)) spawnSpark(x, y, speed)
+  }
+
+  const burst = (x: number, y: number) => {
+    if (reduced) return
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4
+      const sp = 60 + Math.random() * 110
+      sparks.push({
+        x,
+        y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        life: 0,
+        max: 0.45 + Math.random() * 0.4,
+        size: 0.9 + Math.random() * 1.6,
+        c: SPARK_COLORS[i % 3],
+      })
+    }
+  }
+
+  const draw = (now: number, dt: number, alpha: number) => {
+    if (!ctx) return
+    const w = window.innerWidth
+    const h = window.innerHeight
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    if (alpha <= 0.01 || reduced) return
+
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.lineCap = 'round'
+
+    // comet ribbon — glow pass + bright core per segment
+    while (pts.length && now - pts[0].t > LIFE * 1000) pts.shift()
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1]
+      const p1 = pts[i]
+      const k = 1 - (now - p1.t) / (LIFE * 1000)
+      if (k <= 0) continue
+      const seg = Math.hypot(p1.x - p0.x, p1.y - p0.y)
+      if (seg > 150 || seg < 0.01) continue
+      const [r, g, b] = tailColor(k)
+      ctx.strokeStyle = `rgba(${r},${g},${b},${(0.24 * k * alpha).toFixed(3)})`
+      ctx.lineWidth = 10 * k + 2
+      ctx.beginPath()
+      ctx.moveTo(p0.x, p0.y)
+      ctx.lineTo(p1.x, p1.y)
+      ctx.stroke()
+      ctx.strokeStyle = `rgba(${r},${g},${b},${(0.66 * k * alpha).toFixed(3)})`
+      ctx.lineWidth = 2.3 * k + 0.3
+      ctx.beginPath()
+      ctx.moveTo(p0.x, p0.y)
+      ctx.lineTo(p1.x, p1.y)
+      ctx.stroke()
+    }
+
+    // shed sparkles
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i]
+      s.life += dt
+      if (s.life >= s.max) {
+        sparks.splice(i, 1)
+        continue
+      }
+      s.x += s.vx * dt
+      s.y += s.vy * dt
+      s.vx *= 0.955
+      s.vy = s.vy * 0.955 - 16 * dt // sparks drift upward as they die
+      const k = 1 - s.life / s.max
+      const [r, g, b] = s.c
+      ctx.fillStyle = `rgba(${r},${g},${b},${(0.4 * k * alpha).toFixed(3)})`
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, s.size * 2.3 * k + 0.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = `rgba(255,255,255,${(0.85 * k * alpha).toFixed(3)})`
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, s.size * k * 0.9 + 0.2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    ctx.globalCompositeOperation = 'source-over'
+  }
+
+  const destroy = () => {
+    window.removeEventListener('resize', resize)
+    pts.length = 0
+    sparks.length = 0
+  }
+
+  return { push, burst, draw, destroy }
+}
+
 export default function CustomCursor() {
-  const dot = useRef<HTMLDivElement>(null)
+  const star = useRef<HTMLDivElement>(null)
   const ring = useRef<HTMLDivElement>(null)
   const plate = useRef<HTMLDivElement>(null)
+  const tailCanvas = useRef<HTMLCanvasElement>(null)
   const pingHost = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<Mode>('none')
 
@@ -51,10 +205,13 @@ export default function CustomCursor() {
     if (mode !== 'mouse') return
     const store = useExperienceStore.getState()
     store.setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    const reduced = store.reducedMotion
+
+    const tail = tailCanvas.current ? createTail(tailCanvas.current, reduced) : null
 
     const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
     const vel = { sv: 0, ang: 0, sx: 0 } // smoothed speed, motion angle, stretch
-    const state = { op: 0, pop: 0, pressed: false, hidden: true, last: 0 }
+    const state = { pop: 0, pressed: false, hidden: true, last: 0 }
     let raf = 0
 
     const onMove = (e: PointerEvent) => {
@@ -76,7 +233,10 @@ export default function CustomCursor() {
       state.pressed = false
     }
 
-    const onClick = (e: MouseEvent) => spawnPing(e.clientX, e.clientY)
+    const onClick = (e: MouseEvent) => {
+      spawnPing(e.clientX, e.clientY)
+      tail?.burst(e.clientX, e.clientY)
+    }
 
     const onLeave = () => {
       state.hidden = true
@@ -92,7 +252,7 @@ export default function CustomCursor() {
       // raw pointer velocity (px/frame → smoothed)
       const dx = pos.x - pos.rx
       const dy = pos.y - pos.ry
-      const v = Math.hypot(dx, dy) / Math.max(dt, 0.001) * 0.016
+      const v = (Math.hypot(dx, dy) / Math.max(dt, 0.001)) * 0.016
       vel.sv = damp(vel.sv, v, 12, dt)
       if (v > 1.2) {
         const targetAng = Math.atan2(dy, dx)
@@ -118,10 +278,12 @@ export default function CustomCursor() {
       state.pop = damp(state.pop, wantPlate ? 1 : 0, wantPlate ? 7 : 5, dt)
 
       const pressK = state.pressed ? 0.78 : 1
+      const vis = state.hidden ? 0 : 1
 
-      if (dot.current) {
-        dot.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%,-50%) scale(${(big ? 0 : 1) * pressK})`
-        dot.current.style.opacity = state.hidden ? '0' : big ? '0' : '1'
+      if (star.current) {
+        const s = (big ? 0.74 : 1) * pressK
+        star.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%,-50%) scale(${s.toFixed(3)})`
+        star.current.style.opacity = vis ? '1' : '0'
       }
       if (ring.current) {
         // stretch along the motion vector; keep the label upright when "big"
@@ -130,7 +292,7 @@ export default function CustomCursor() {
         const sx = (1 + stretch) * pressK
         const sy = (1 - stretch * 0.45) * pressK
         ring.current.style.transform = `translate3d(${pos.rx}px, ${pos.ry}px, 0) translate(-50%,-50%) rotate(${rot}deg) scale(${sx}, ${sy})`
-        ring.current.style.opacity = state.hidden ? '0' : '1'
+        ring.current.style.opacity = vis ? '1' : '0'
       }
       if (plate.current) {
         // the plate lags behind with its own heavier inertia + speed tilt
@@ -138,6 +300,10 @@ export default function CustomCursor() {
         plate.current.style.transform = `translate3d(${pos.px + 26}px, ${pos.py + 30}px, 0) rotate(${tilt}deg) scale(${0.92 + state.pop * 0.08})`
         plate.current.style.opacity = state.pop.toFixed(3)
       }
+
+      // comet tail feeds off the smoothed star position
+      tail?.push(pos.x, pos.y, v, now)
+      tail?.draw(now, dt, vis)
 
       raf = requestAnimationFrame(tick)
     }
@@ -179,6 +345,7 @@ export default function CustomCursor() {
       document.removeEventListener('mouseover', onOver)
       document.removeEventListener('mouseout', onOut)
       document.documentElement.classList.remove('has-custom-cursor')
+      tail?.destroy()
     }
   }, [mode])
 
@@ -187,6 +354,9 @@ export default function CustomCursor() {
     if (mode !== 'touch') return
     const store = useExperienceStore.getState()
     store.setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    const reduced = store.reducedMotion
+
+    const tail = tailCanvas.current ? createTail(tailCanvas.current, reduced) : null
 
     const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
     const vel = { sx: 0, ang: 0 }
@@ -208,6 +378,7 @@ export default function CustomCursor() {
       state.active = true
       state.fade = 0
       spawnPing(pos.x, pos.y)
+      tail?.burst(pos.x, pos.y)
 
       // reveal the contextual label straight from the touch target.
       // canvas touches are left alone — the 3D scene sets its own cursor
@@ -261,7 +432,7 @@ export default function CustomCursor() {
 
       const dx = pos.x - pos.rx
       const dy = pos.y - pos.ry
-      const v = Math.hypot(dx, dy) / Math.max(dt, 0.001) * 0.016
+      const v = (Math.hypot(dx, dy) / Math.max(dt, 0.001)) * 0.016
       if (v > 1.2) {
         const targetAng = Math.atan2(dy, dx)
         let da = targetAng - vel.ang
@@ -284,9 +455,9 @@ export default function CustomCursor() {
       const wantPlate = ready && sf < 0.62 && visible && !big
       state.pop = damp(state.pop, wantPlate ? 1 : 0, wantPlate ? 9 : 6, dt)
 
-      if (dot.current) {
-        dot.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%,-50%) scale(${big ? 0 : 1})`
-        dot.current.style.opacity = visible ? (big ? '0' : String(vis)) : '0'
+      if (star.current) {
+        star.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%,-50%) scale(${big ? 0.74 : 1})`
+        star.current.style.opacity = visible ? String(vis) : '0'
       }
       if (ring.current) {
         const stretch = big ? 0 : vel.sx
@@ -300,6 +471,14 @@ export default function CustomCursor() {
         const tilt = Math.max(-8, Math.min(8, dx * 0.22))
         plate.current.style.transform = `translate3d(${pos.px + 26}px, ${pos.py + 34}px, 0) rotate(${tilt}deg) scale(${0.92 + state.pop * 0.08})`
         plate.current.style.opacity = state.pop.toFixed(3)
+      }
+
+      // comet tail follows the fingertip
+      if (visible) {
+        tail?.push(pos.x, pos.y, v, now)
+        tail?.draw(now, dt, vis)
+      } else {
+        tail?.draw(now, dt, 0)
       }
 
       // release the revealed label once the rig has dissolved
@@ -326,6 +505,7 @@ export default function CustomCursor() {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       useExperienceStore.getState().setCursor('default')
+      tail?.destroy()
     }
   }, [mode])
 
@@ -349,14 +529,39 @@ export default function CustomCursor() {
 
   return (
     <>
-      <div ref={pingHost} className="pointer-events-none fixed inset-0 z-[198]" aria-hidden="true" />
-
-      <div
-        ref={dot}
-        className="cursor-dot-idle pointer-events-none fixed left-0 top-0 z-[200] h-[5px] w-[5px] rounded-full bg-white mix-blend-difference"
-        style={{ opacity: 0 }}
+      {/* glowing comet tail */}
+      <canvas
+        ref={tailCanvas}
+        className="pointer-events-none fixed inset-0 z-[195] h-full w-full"
         aria-hidden="true"
       />
+
+      <div ref={pingHost} className="pointer-events-none fixed inset-0 z-[198]" aria-hidden="true" />
+
+      {/* the glowing star */}
+      <div
+        ref={star}
+        className="pointer-events-none fixed left-0 top-0 z-[200]"
+        style={{ opacity: 0 }}
+        aria-hidden="true"
+      >
+        <div className="cursor-star-spin">
+          <svg className="cursor-star-svg" width="21" height="21" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <radialGradient id="cursorStarCore" cx="50%" cy="50%" r="52%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="55%" stopColor="#f2ffd9" />
+                <stop offset="100%" stopColor="#bef264" />
+              </radialGradient>
+            </defs>
+            <path
+              d="M12 0C12.9 6.6 17.4 11.1 24 12C17.4 12.9 12.9 17.4 12 24C11.1 17.4 6.6 12.9 0 12C6.6 11.1 11.1 6.6 12 0Z"
+              fill="url(#cursorStarCore)"
+            />
+          </svg>
+        </div>
+      </div>
+
       <div
         ref={ring}
         className="pointer-events-none fixed left-0 top-0 z-[199] flex items-center justify-center rounded-full border border-white/70 mix-blend-difference transition-[width,height,background-color,border-color] duration-300 ease-out"

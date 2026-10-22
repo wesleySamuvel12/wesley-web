@@ -209,3 +209,22 @@ Stage Summary:
 - Smart Attendance now scans the user's ORIGINAL FACE hologram (shader hologram + point-cloud dust) instead of an abstract wireframe
 - Intro headline is a cursor-driven lens: red-gradient magnification + bending wave on every letter, and it works under the fingertip on mobile (adaptive lens radius)
 - Tuning surfaces: MagnifyTitle (RED_GRADIENT, strength, sigma clamp 42-122, bend gains), FaceHologram (width, shader uniforms), AttendanceScene face/cage placement
+
+---
+Task ID: 17
+Agent: main (Z.ai Code)
+Task: "cursor must be glowing star with glowing tail"
+
+Work Log:
+- CustomCursor rebuilt as a shooting-star rig (both mouse + touch modes share it):
+  · STAR — 4-point sparkle SVG (white core → #f2ffd9 → #bef264 radial gradient) with layered CSS bloom (drop-shadows white/lime/cyan), slow 7s spin + 2.4s twinkle (nested elements so JS transform and CSS animations don't fight); compresses 0.78x on press, tucks to 0.74x inside the label ring on interactive targets; replaced the old breathing dot entirely
+  · TAIL — full-screen 2D canvas (z-195, pointer-events-none, DPR capped 1.5): comet ribbon fed by the smoothed star position; per segment a wide glow pass + bright core pass with width/alpha tapering along age; colour ramp white → lime (#bef264) → cyan (#67e8f9) → fade; LIFE 0.8s (bumped from 0.55 after first pass so the comet reads longer); additive ('lighter') blending; teleport guard skips >150px segments
+  · SPARKLES — shed proportional to pointer speed (drift upward, shrink, white/lime/cyan mix) + 12-spark radial BURST on every click/touchstart (replaces nothing — ping ring still fires too)
+  · reduced-motion: tail + sparks fully bypassed, star animations disabled via media query
+- Kept intact: contextual ring labels (VIEW/INSPECT/OPEN), intro WESLEY SAMUVEL plate, mode detection, dev probes, full cleanup (raf, listeners, canvas resize, painter destroy)
+- Verified via agent-browser: desktop sweep — star + curved white→lime comet tail visible in screenshot (r17_tail_long.png); tail canvas pixel-proof (167 lit samples after sweep, 0 → 10 after click burst); hover ABOUT → big label ring with star tucked (r17_star_hover.png); intro letter magnification unaffected; mobile 390x844 touch sweep — full comet streak under the fingertip with sparkles + red bent letters + name plate (r17_touch_star.png, 165 lit samples); zero page errors
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log clean
+
+Stage Summary:
+- The cursor is now a glowing star dragging a glowing comet tail (with speed-shed sparkles and click fireworks), identical language on mouse and touch
+- Tuning surfaces: createTail LIFE/alphas/tailColor ramp, star size/spin/twinkle in globals.css, burst count, spark spawn rate (speed * 0.032)
