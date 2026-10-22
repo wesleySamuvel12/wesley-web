@@ -11,11 +11,16 @@ import { getScrollState } from '@/lib/scrollEngine'
  *               slowly spinning + twinkling; compresses on press
  *  · tail     — a canvas comet ribbon (glow pass + bright core) that fades
  *               white → lime → cyan and sheds tiny sparkles with speed
- *  · scroll   — while the page is scrolling the comet IGNITES into a fire
- *               shooting star: white-hot → gold → amber → ember ramp, a
- *               longer brighter streak that shoots along the scroll gesture,
- *               ember sparks and a hot halo around the star; it cools back
- *               to the lime comet shortly after the scroll settles
+ *  · scroll   — while the page is scrolling the comet IGNITES into a
+ *               shooting star whose colour is unique to the current scene
+ *               (15 palettes — ember intro, lime hero, platinum identity,
+ *               rose about, cyan tech, emerald koottam, holo-violet
+ *               attendance, seafoam hydro, copper embedded, magenta data,
+ *               lavender web, gold stats, fuchsia creative, sunset journey,
+ *               lime-gold contact); palettes crossfade across the film cut,
+ *               the star's hot halo re-tints per scene and sparks become
+ *               scene-coloured embers; it cools back to the lime comet
+ *               shortly after the scroll settles
  *  · burst    — clicks explode a small radial firework of sparks
  *  · ring     — contextual label rig (VIEW / INSPECT / OPEN) on interactive
  *               targets; the star tucks inside it
@@ -43,20 +48,72 @@ function tailColor(k: number): [number, number, number] {
   return [Math.round(103 + 87 * t), Math.round(232 + 10 * t), Math.round(249 - 149 * t)]
 }
 
-/* shooting-star fire ramp: k=1 head (white-hot) → gold → amber → ember red */
-function fireColor(k: number): [number, number, number] {
-  if (k > 0.75) {
-    const t = (k - 0.75) / 0.25
-    return [255, Math.round(209 + 46 * t), Math.round(102 + 130 * t)]
-  }
-  if (k > 0.4) {
-    const t = (k - 0.4) / 0.35
-    return [255, Math.round(138 + 71 * t), Math.round(60 + 42 * t)]
-  }
-  const t = k / 0.4
-  return [Math.round(226 + 29 * t), Math.round(69 + 69 * t), Math.round(47 + 13 * t)]
+/* ------------------------------------------------------------------ */
+/* SHOOTING-STAR PALETTES — one burning ramp per scene (index-matched   */
+/* to SCENES in lib/scenes.ts). Stops: [hot head, mid, deep, ember].    */
+/* ------------------------------------------------------------------ */
+type Stop = [number, number, number]
+const SCENE_RAMPS: Stop[][] = [
+  /* 00 intro      — ember gold-red */  [[255, 240, 214], [255, 209, 102], [255, 138, 60], [226, 69, 47]],
+  /* 01 hero       — lime bolt */       [[228, 255, 180], [216, 255, 128], [142, 214, 42], [52, 120, 34]],
+  /* 02 identity   — platinum */        [[235, 242, 252], [222, 230, 240], [150, 164, 182], [74, 84, 100]],
+  /* 03 about      — rose */            [[255, 226, 238], [255, 142, 182], [232, 66, 142], [128, 24, 88]],
+  /* 04 tech       — electric cyan */   [[212, 248, 255], [152, 242, 255], [64, 196, 248], [16, 98, 148]],
+  /* 05 koottam    — emerald */         [[222, 255, 224], [138, 240, 176], [40, 198, 98], [18, 104, 62]],
+  /* 06 attendance — holo violet */     [[232, 222, 255], [206, 170, 255], [148, 102, 246], [84, 44, 158]],
+  /* 07 hydro      — seafoam aqua */    [[214, 255, 242], [132, 242, 222], [52, 196, 178], [14, 104, 104]],
+  /* 08 embedded   — copper */          [[255, 238, 214], [255, 206, 148], [208, 128, 56], [116, 62, 24]],
+  /* 09 data       — magenta plasma */  [[255, 226, 248], [244, 150, 236], [214, 64, 196], [120, 22, 118]],
+  /* 10 web        — lavender */        [[232, 226, 255], [206, 186, 255], [152, 126, 240], [92, 64, 164]],
+  /* 11 stats      — gold */            [[255, 248, 206], [255, 224, 120], [230, 176, 48], [140, 96, 20]],
+  /* 12 creative   — fuchsia */         [[255, 226, 240], [255, 158, 224], [228, 72, 178], [128, 26, 110]],
+  /* 13 journey    — sunset */          [[255, 240, 214], [255, 196, 128], [240, 116, 58], [158, 42, 42]],
+  /* 14 contact    — lime gold */       [[240, 255, 204], [222, 248, 116], [158, 206, 42], [66, 116, 26]],
+]
+
+const mixStop = (a: Stop, b: Stop, t: number): [number, number, number] => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+]
+
+/* sample a palette ramp — short white-hot head, long coloured body so the
+   scene hue reads clearly: k=1 head → 0.85 mid → 0.5 deep → 0 ember tail */
+function rampAt(p: Stop[], k: number): [number, number, number] {
+  if (k > 0.85) return mixStop(p[1], p[0], (k - 0.85) / 0.15)
+  if (k > 0.5) return mixStop(p[2], p[1], (k - 0.5) / 0.35)
+  return mixStop(p[3], p[2], k / 0.5)
 }
 
+const clampIdx = (sf: number) =>
+  Math.max(0, Math.min(SCENE_RAMPS.length - 1, Math.floor(sf)))
+
+/* the burning colour for the current scene — pure scene palette for most
+   of the scene, crossfading into the next across the film cut */
+function sceneFire(sf: number, k: number): [number, number, number] {
+  const i = clampIdx(sf)
+  const f = Math.max(0, Math.min(1, sf - i))
+  const w = f < 0.85 ? 0 : (f - 0.85) / 0.15
+  const ca = rampAt(SCENE_RAMPS[i], k)
+  if (w <= 0 || i >= SCENE_RAMPS.length - 1) return ca
+  const cb = rampAt(SCENE_RAMPS[i + 1], k)
+  return [ca[0] + (cb[0] - ca[0]) * w, ca[1] + (cb[1] - ca[1]) * w, ca[2] + (cb[2] - ca[2]) * w]
+}
+
+/* the star's hot halo re-tints itself from the scene palette */
+function haloGradient(i: number): string {
+  const p = SCENE_RAMPS[clampIdx(i + 0.5)]
+  const rgba = (c: Stop, a: number) => `rgba(${c[0]},${c[1]},${c[2]},${a})`
+  return `radial-gradient(circle, ${rgba(p[0], 0.95)} 0%, ${rgba(p[1], 0.5)} 32%, ${rgba(p[2], 0)} 68%)`
+}
+
+const SPARK_COLORS: [number, number, number][] = [
+  [255, 255, 255],
+  [190, 242, 100],
+  [103, 232, 249],
+]
+
+/* blend the resting comet colour and the burning scene colour (rounded) */
 const mix3 = (
   a: [number, number, number],
   b: [number, number, number],
@@ -65,19 +122,6 @@ const mix3 = (
   Math.round(a[0] + (b[0] - a[0]) * t),
   Math.round(a[1] + (b[1] - a[1]) * t),
   Math.round(a[2] + (b[2] - a[2]) * t),
-]
-
-const SPARK_COLORS: [number, number, number][] = [
-  [255, 255, 255],
-  [190, 242, 100],
-  [103, 232, 249],
-]
-
-/* ember palette the sparks take while the comet is burning (scrolling) */
-const EMBER_COLORS: [number, number, number][] = [
-  [255, 214, 120],
-  [255, 138, 60],
-  [255, 255, 255],
 ]
 
 interface Spark {
@@ -118,12 +162,13 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
   const pts: TailPt[] = []
   const sparks: Spark[] = []
 
-  const spawnSpark = (x: number, y: number, b: number) => {
+  const spawnSpark = (x: number, y: number, b: number, sf: number) => {
     if (reduced || sparks.length > 90) return
     const a = Math.random() * Math.PI * 2
     const sp = 18 + Math.random() * 70
     const hot = b > 0.45
-    const pal = hot ? EMBER_COLORS : SPARK_COLORS
+    // burning sparks take the current scene's palette as embers
+    const pal = hot ? SCENE_RAMPS[clampIdx(sf)] : SPARK_COLORS
     sparks.push({
       x: x + (Math.random() - 0.5) * 5,
       y: y + (Math.random() - 0.5) * 5,
@@ -136,11 +181,11 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
     })
   }
 
-  const push = (x: number, y: number, speed: number, now: number, b = 0) => {
+  const push = (x: number, y: number, speed: number, now: number, b = 0, sf = 0) => {
     pts.push({ x, y, t: now, exp: (LIFE + b * (LIFE_HOT - LIFE)) * 1000, b })
     if (pts.length > 64) pts.shift()
     if (speed > 1.4 && Math.random() < Math.min(0.9, speed * (0.032 + b * 0.03)))
-      spawnSpark(x, y, b)
+      spawnSpark(x, y, b, sf)
   }
 
   const burst = (x: number, y: number) => {
@@ -161,7 +206,7 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
     }
   }
 
-  const draw = (now: number, dt: number, alpha: number) => {
+  const draw = (now: number, dt: number, alpha: number, sf = 0) => {
     if (!ctx) return
     const w = window.innerWidth
     const h = window.innerHeight
@@ -183,7 +228,7 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
       const seg = Math.hypot(p1.x - p0.x, p1.y - p0.y)
       if (seg > 150 || seg < 0.01) continue
       const bb = (p0.b + p1.b) / 2
-      const [r, g, b] = mix3(tailColor(k), fireColor(k), bb)
+      const [r, g, b] = mix3(tailColor(k), sceneFire(sf, k), bb)
       ctx.strokeStyle = `rgba(${r},${g},${b},${(0.24 * k * alpha * (1 + 0.4 * bb)).toFixed(3)})`
       ctx.lineWidth = (10 * k + 2) * (1 + 0.5 * bb)
       ctx.beginPath()
@@ -266,7 +311,7 @@ export default function CustomCursor() {
 
     const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
     const vel = { sv: 0, ang: 0, sx: 0 } // smoothed speed, motion angle, stretch
-    const state = { pop: 0, pressed: false, hidden: true, last: 0, sy: window.scrollY, dvs: 0, boost: 0 }
+    const state = { pop: 0, pressed: false, hidden: true, last: 0, sy: window.scrollY, dvs: 0, boost: 0, haloScene: -1 }
     let raf = 0
 
     const onMove = (e: PointerEvent) => {
@@ -367,15 +412,21 @@ export default function CustomCursor() {
 
       // comet tail feeds off the smoothed star position; while the page
       // scrolls a vertical fire streak shoots opposite the gesture so the
-      // star reads as a shooting star tearing through the page motion
+      // star reads as a shooting star tearing through the page motion —
+      // burning in the CURRENT scene's palette
       const off = Math.max(-110, Math.min(110, -state.dvs * 3.4))
       if (fire > 0.05 && Math.abs(off) > 3)
-        tail?.push(pos.x, pos.y + off, Math.abs(state.dvs) * 1.7, now, Math.max(0.85, fire))
-      tail?.push(pos.x, pos.y, v, now, fire)
-      tail?.draw(now, dt, vis)
+        tail?.push(pos.x, pos.y + off, Math.abs(state.dvs) * 1.7, now, Math.max(0.85, fire), sf)
+      tail?.push(pos.x, pos.y, v, now, fire, sf)
+      tail?.draw(now, dt, vis, sf)
 
-      // hot halo — the star itself ignites while burning
+      // hot halo — the star itself ignites while burning, re-tinted per scene
       if (halo.current) {
+        const sIdx = Math.max(0, Math.min(14, Math.floor(sf)))
+        if (state.haloScene !== sIdx) {
+          state.haloScene = sIdx
+          halo.current.style.background = haloGradient(sIdx)
+        }
         halo.current.style.opacity = (fire * 0.95).toFixed(3)
         halo.current.style.transform = `translate(-50%,-50%) scale(${(0.7 + fire * 0.75).toFixed(3)})`
       }
@@ -435,7 +486,7 @@ export default function CustomCursor() {
 
     const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
     const vel = { sx: 0, ang: 0 }
-    const state = { pop: 0, active: false, fade: 0, last: 0, init: false, sy: window.scrollY, dvs: 0, boost: 0 }
+    const state = { pop: 0, active: false, fade: 0, last: 0, init: false, sy: window.scrollY, dvs: 0, boost: 0, haloScene: -1 }
 
     let raf = 0
 
@@ -559,19 +610,25 @@ export default function CustomCursor() {
         plate.current.style.opacity = state.pop.toFixed(3)
       }
 
-      // comet tail follows the fingertip (+ fire streak while scrolling)
+      // comet tail follows the fingertip (+ fire streak while scrolling,
+      // burning in the CURRENT scene's palette)
       if (visible) {
         const off = Math.max(-110, Math.min(110, -state.dvs * 3.4))
         if (fire > 0.05 && Math.abs(off) > 3)
-          tail?.push(pos.x, pos.y + off, Math.abs(state.dvs) * 1.7, now, Math.max(0.85, fire))
-        tail?.push(pos.x, pos.y, v, now, fire)
-        tail?.draw(now, dt, vis)
+          tail?.push(pos.x, pos.y + off, Math.abs(state.dvs) * 1.7, now, Math.max(0.85, fire), sf)
+        tail?.push(pos.x, pos.y, v, now, fire, sf)
+        tail?.draw(now, dt, vis, sf)
       } else {
-        tail?.draw(now, dt, 0)
+        tail?.draw(now, dt, 0, sf)
       }
 
-      // hot halo — the star itself ignites while burning
+      // hot halo — the star itself ignites while burning, re-tinted per scene
       if (halo.current) {
+        const sIdx = Math.max(0, Math.min(14, Math.floor(sf)))
+        if (state.haloScene !== sIdx) {
+          state.haloScene = sIdx
+          halo.current.style.background = haloGradient(sIdx)
+        }
         halo.current.style.opacity = (fire * 0.95 * vis).toFixed(3)
         halo.current.style.transform = `translate(-50%,-50%) scale(${(0.7 + fire * 0.75).toFixed(3)})`
       }

@@ -248,3 +248,24 @@ Stage Summary:
 - The cursor now has two states: a lime/cyan comet at rest, and a FIRE SHOOTING STAR while the page scrolls — white-hot head, gold→amber→ember tail, vertical streak along the scroll gesture, ember sparks, hot halo; it cools back to the comet automatically
 - Works identically on mouse and touch (mobile fling scrolls keep the star burning)
 - Tuning surfaces: boost thresholds ((|dvs|-2.5)/20), attack/cool λ, fireColor ramp stops, trail offset gain (-dvs*3.4, clamp ±110), LIFE_HOT 1.3s, halo gradient
+
+---
+Task ID: 19
+Agent: main (Z.ai Code)
+Task: "tail colour also change to another while scrolling the page it must change every single slide"
+
+Work Log:
+- SCENE_RAMPS: 15 shooting-star palettes, one per scene (index-matched to SCENES.ts) — intro ember gold-red, hero lime bolt, identity platinum, about rose, tech electric-cyan, koottam emerald, attendance holo-violet, hydro seafoam, embedded copper, data magenta-plasma, web lavender, stats gold, creative fuchsia, journey sunset, contact lime-gold; adjacent scenes strongly distinct; each palette = [hot head, mid, deep, ember] stops
+- rampAt breakpoints retuned (k: 1→0.85 head, 0.85→0.5 mid, 0.5→0 ember) so the coloured body dominates the ribbon and the scene hue reads clearly (first pass with 0.75/0.4 breakpoints washed everything toward white under additive blending)
+- sceneFire(sf, k): holds the scene's pure palette for 85% of the scene then crossfades into the next across the film cut — scrolling through a boundary morphs the tail colour smoothly
+- Halo re-tint: when floor(sceneFloat) changes both rigs swap the star's .cursor-star-halo background to a radial gradient built from the new scene's hot/mid stops (haloGradient); verified halo strings per scene
+- Ember sparks now take the CURRENT scene's palette (hot/mid/deep stops) while burning; resting click-burst keeps the brand white/lime/cyan
+- plumbing: sf threaded through push()/draw() in both mouse + touch rigs (sf was already read for the intro plate); draw signature now (now, dt, alpha, sf)
+- Fix during edit: a careless MultiEdit dropped `let raf = 0` + the onMove declaration line — restored immediately; also mix3 had been dropped with the old fireColor and was re-added
+- Verification (fringe-average pixel probe, alpha<170 band, desktop 1600x1000): TECH scene avg [215,248,255] (cyan ✓), DATA scene avg [236,138,225] (magenta ✓), HERO scene avg [205,238,156] (lime ✓ — screenshot r19_hero_lime2.png shows a fully lime meteor over the PCB); haloHot matched each palette; about-rose burn also observed mid-testing
+- Mobile 390x844: touch scroll inside intro → avg [241,225,165] warm ember ✓; after crossing into hero + touch burst → avg [219,249,169] lime ✓ with halo re-tint (255,240,214)→(228,255,180); note — synthetic window.scrollTo fights Lenis on mobile, so scene crossing verified via __scrollToScene glide + local touch bursts (real finger flings drive Lenis directly and behave like the desktop path since the boost signal is scrollY-delta based)
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only, zero page errors
+
+Stage Summary:
+- Every scene now burns its own shooting-star colour: the tail, star halo and ember sparks all re-tint per scene and crossfade across each film cut; resting comet stays lime/cyan
+- Tuning surfaces: SCENE_RAMPS (15 × 4 stops), rampAt breakpoints (0.85/0.5), sceneFire crossfade window (last 15% of a scene), haloGradient stop alphas
