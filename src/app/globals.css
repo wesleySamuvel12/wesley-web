@@ -425,6 +425,28 @@
     transform: rotate(360deg);
   }
 }
+
+/* hot halo — ignites behind the star while scrolling so the cursor reads
+   as a fire shooting star; opacity/scale are JS-driven by scroll boost */
+.cursor-star-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 224, 138, 0.95) 0%,
+    rgba(255, 148, 62, 0.5) 32%,
+    rgba(226, 69, 47, 0) 68%
+  );
+  filter: blur(1.5px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  will-change: opacity, transform;
+}
 @keyframes starTwinkle {
   0%,
   100% {

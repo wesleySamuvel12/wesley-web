@@ -11,6 +11,11 @@ import { getScrollState } from '@/lib/scrollEngine'
  *               slowly spinning + twinkling; compresses on press
  *  · tail     — a canvas comet ribbon (glow pass + bright core) that fades
  *               white → lime → cyan and sheds tiny sparkles with speed
+ *  · scroll   — while the page is scrolling the comet IGNITES into a fire
+ *               shooting star: white-hot → gold → amber → ember ramp, a
+ *               longer brighter streak that shoots along the scroll gesture,
+ *               ember sparks and a hot halo around the star; it cools back
+ *               to the lime comet shortly after the scroll settles
  *  · burst    — clicks explode a small radial firework of sparks
  *  · ring     — contextual label rig (VIEW / INSPECT / OPEN) on interactive
  *               targets; the star tucks inside it
@@ -18,7 +23,9 @@ import { getScrollState } from '@/lib/scrollEngine'
  *               the cursor with its own heavier lag
  *
  * TOUCH REVEAL — the same star + tail + sparkles follow the fingertip with
- * fast springs, materialise on touch and dissolve after lift-off.
+ * fast springs, materialise on touch and dissolve after lift-off (the rig
+ * holds on while a scroll is in flight so mobile gets the same shooting
+ * star during fling scrolls).
  */
 
 const damp = (cur: number, target: number, lambda: number, dt: number) =>
@@ -26,7 +33,7 @@ const damp = (cur: number, target: number, lambda: number, dt: number) =>
 
 type Mode = 'none' | 'mouse' | 'touch'
 
-/* tail colour ramp: k=1 head (white) → k≈0.6 (lime) → k=0 tail (cyan) */
+/* comet colour ramp: k=1 head (white) → k≈0.6 (lime) → k=0 tail (cyan) */
 function tailColor(k: number): [number, number, number] {
   if (k > 0.62) {
     const t = (k - 0.62) / 0.38
@@ -36,10 +43,41 @@ function tailColor(k: number): [number, number, number] {
   return [Math.round(103 + 87 * t), Math.round(232 + 10 * t), Math.round(249 - 149 * t)]
 }
 
+/* shooting-star fire ramp: k=1 head (white-hot) → gold → amber → ember red */
+function fireColor(k: number): [number, number, number] {
+  if (k > 0.75) {
+    const t = (k - 0.75) / 0.25
+    return [255, Math.round(209 + 46 * t), Math.round(102 + 130 * t)]
+  }
+  if (k > 0.4) {
+    const t = (k - 0.4) / 0.35
+    return [255, Math.round(138 + 71 * t), Math.round(60 + 42 * t)]
+  }
+  const t = k / 0.4
+  return [Math.round(226 + 29 * t), Math.round(69 + 69 * t), Math.round(47 + 13 * t)]
+}
+
+const mix3 = (
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number
+): [number, number, number] => [
+  Math.round(a[0] + (b[0] - a[0]) * t),
+  Math.round(a[1] + (b[1] - a[1]) * t),
+  Math.round(a[2] + (b[2] - a[2]) * t),
+]
+
 const SPARK_COLORS: [number, number, number][] = [
   [255, 255, 255],
   [190, 242, 100],
   [103, 232, 249],
+]
+
+/* ember palette the sparks take while the comet is burning (scrolling) */
+const EMBER_COLORS: [number, number, number][] = [
+  [255, 214, 120],
+  [255, 138, 60],
+  [255, 255, 255],
 ]
 
 interface Spark {
@@ -51,6 +89,16 @@ interface Spark {
   max: number
   size: number
   c: [number, number, number]
+}
+
+interface TailPt {
+  x: number
+  y: number
+  t: number
+  /** ms this point stays alive (boosted points live longer) */
+  exp: number
+  /** scroll boost 0..1 frozen at spawn — old segments keep their fire */
+  b: number
 }
 
 /** glowing comet tail — shared by the mouse and touch rigs */
@@ -65,30 +113,34 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
   resize()
   window.addEventListener('resize', resize)
 
-  const LIFE = 0.8 // seconds a tail segment stays alive
-  const pts: { x: number; y: number; t: number }[] = []
+  const LIFE = 0.8 // seconds a tail segment stays alive (rest)
+  const LIFE_HOT = 1.3 // a burning (scrolling) streak lingers much longer
+  const pts: TailPt[] = []
   const sparks: Spark[] = []
 
-  const spawnSpark = (x: number, y: number, speed: number) => {
-    if (reduced || sparks.length > 80) return
+  const spawnSpark = (x: number, y: number, b: number) => {
+    if (reduced || sparks.length > 90) return
     const a = Math.random() * Math.PI * 2
     const sp = 18 + Math.random() * 70
+    const hot = b > 0.45
+    const pal = hot ? EMBER_COLORS : SPARK_COLORS
     sparks.push({
       x: x + (Math.random() - 0.5) * 5,
       y: y + (Math.random() - 0.5) * 5,
       vx: Math.cos(a) * sp,
       vy: Math.sin(a) * sp - 22,
       life: 0,
-      max: 0.4 + Math.random() * 0.55,
+      max: (hot ? 0.55 : 0.4) + Math.random() * 0.55,
       size: 0.7 + Math.random() * 1.7,
-      c: SPARK_COLORS[Math.random() < 0.45 ? 0 : Math.random() < 0.6 ? 1 : 2],
+      c: pal[Math.random() < 0.45 ? 0 : Math.random() < 0.6 ? 1 : 2],
     })
   }
 
-  const push = (x: number, y: number, speed: number, now: number) => {
-    pts.push({ x, y, t: now })
-    if (pts.length > 44) pts.shift()
-    if (speed > 1.4 && Math.random() < Math.min(0.85, speed * 0.032)) spawnSpark(x, y, speed)
+  const push = (x: number, y: number, speed: number, now: number, b = 0) => {
+    pts.push({ x, y, t: now, exp: (LIFE + b * (LIFE_HOT - LIFE)) * 1000, b })
+    if (pts.length > 64) pts.shift()
+    if (speed > 1.4 && Math.random() < Math.min(0.9, speed * (0.032 + b * 0.03)))
+      spawnSpark(x, y, b)
   }
 
   const burst = (x: number, y: number) => {
@@ -120,24 +172,26 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
     ctx.globalCompositeOperation = 'lighter'
     ctx.lineCap = 'round'
 
-    // comet ribbon — glow pass + bright core per segment
-    while (pts.length && now - pts[0].t > LIFE * 1000) pts.shift()
+    // comet ribbon — glow pass + bright core per segment; scroll-boosted
+    // points burn in the fire ramp, wider + brighter, and live longer
+    while (pts.length && now - pts[0].t > pts[0].exp) pts.shift()
     for (let i = 1; i < pts.length; i++) {
       const p0 = pts[i - 1]
       const p1 = pts[i]
-      const k = 1 - (now - p1.t) / (LIFE * 1000)
+      const k = 1 - (now - p1.t) / p1.exp
       if (k <= 0) continue
       const seg = Math.hypot(p1.x - p0.x, p1.y - p0.y)
       if (seg > 150 || seg < 0.01) continue
-      const [r, g, b] = tailColor(k)
-      ctx.strokeStyle = `rgba(${r},${g},${b},${(0.24 * k * alpha).toFixed(3)})`
-      ctx.lineWidth = 10 * k + 2
+      const bb = (p0.b + p1.b) / 2
+      const [r, g, b] = mix3(tailColor(k), fireColor(k), bb)
+      ctx.strokeStyle = `rgba(${r},${g},${b},${(0.24 * k * alpha * (1 + 0.4 * bb)).toFixed(3)})`
+      ctx.lineWidth = (10 * k + 2) * (1 + 0.5 * bb)
       ctx.beginPath()
       ctx.moveTo(p0.x, p0.y)
       ctx.lineTo(p1.x, p1.y)
       ctx.stroke()
-      ctx.strokeStyle = `rgba(${r},${g},${b},${(0.66 * k * alpha).toFixed(3)})`
-      ctx.lineWidth = 2.3 * k + 0.3
+      ctx.strokeStyle = `rgba(${r},${g},${b},${(0.66 * k * alpha * (1 + 0.45 * bb)).toFixed(3)})`
+      ctx.lineWidth = (2.3 * k + 0.3) * (1 + 0.5 * bb)
       ctx.beginPath()
       ctx.moveTo(p0.x, p0.y)
       ctx.lineTo(p1.x, p1.y)
@@ -182,6 +236,7 @@ function createTail(canvas: HTMLCanvasElement, reduced: boolean) {
 
 export default function CustomCursor() {
   const star = useRef<HTMLDivElement>(null)
+  const halo = useRef<HTMLDivElement>(null)
   const ring = useRef<HTMLDivElement>(null)
   const plate = useRef<HTMLDivElement>(null)
   const tailCanvas = useRef<HTMLCanvasElement>(null)
@@ -211,7 +266,7 @@ export default function CustomCursor() {
 
     const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
     const vel = { sv: 0, ang: 0, sx: 0 } // smoothed speed, motion angle, stretch
-    const state = { pop: 0, pressed: false, hidden: true, last: 0 }
+    const state = { pop: 0, pressed: false, hidden: true, last: 0, sy: window.scrollY, dvs: 0, boost: 0 }
     let raf = 0
 
     const onMove = (e: PointerEvent) => {
@@ -248,6 +303,15 @@ export default function CustomCursor() {
     const tick = (now: number) => {
       const dt = Math.min(0.05, state.last ? (now - state.last) / 1000 : 0.016)
       state.last = now
+
+      // SCROLL BOOST — page motion ignites the comet into a fire shooting star
+      let dv = window.scrollY - state.sy
+      state.sy = window.scrollY
+      if (Math.abs(dv) > 400) dv = 0 // teleport guard (instant jumps)
+      state.dvs = damp(state.dvs, dv, 10, dt)
+      const rawBoost = Math.max(0, Math.min(1, (Math.abs(state.dvs) - 2.5) / 20))
+      state.boost = damp(state.boost, rawBoost, rawBoost > state.boost ? 16 : 4.2, dt)
+      const fire = state.boost
 
       // raw pointer velocity (px/frame → smoothed)
       const dx = pos.x - pos.rx
@@ -301,9 +365,20 @@ export default function CustomCursor() {
         plate.current.style.opacity = state.pop.toFixed(3)
       }
 
-      // comet tail feeds off the smoothed star position
-      tail?.push(pos.x, pos.y, v, now)
+      // comet tail feeds off the smoothed star position; while the page
+      // scrolls a vertical fire streak shoots opposite the gesture so the
+      // star reads as a shooting star tearing through the page motion
+      const off = Math.max(-110, Math.min(110, -state.dvs * 3.4))
+      if (fire > 0.05 && Math.abs(off) > 3)
+        tail?.push(pos.x, pos.y + off, Math.abs(state.dvs) * 1.7, now, Math.max(0.85, fire))
+      tail?.push(pos.x, pos.y, v, now, fire)
       tail?.draw(now, dt, vis)
+
+      // hot halo — the star itself ignites while burning
+      if (halo.current) {
+        halo.current.style.opacity = (fire * 0.95).toFixed(3)
+        halo.current.style.transform = `translate(-50%,-50%) scale(${(0.7 + fire * 0.75).toFixed(3)})`
+      }
 
       raf = requestAnimationFrame(tick)
     }
@@ -360,7 +435,7 @@ export default function CustomCursor() {
 
     const pos = { x: -100, y: -100, rx: -100, ry: -100, px: -100, py: -100 }
     const vel = { sx: 0, ang: 0 }
-    const state = { pop: 0, active: false, fade: 0, last: 0, init: false }
+    const state = { pop: 0, active: false, fade: 0, last: 0, init: false, sy: window.scrollY, dvs: 0, boost: 0 }
 
     let raf = 0
 
@@ -423,12 +498,23 @@ export default function CustomCursor() {
         return
       }
 
-      // fade countdown once the finger has lifted
+      // fade countdown once the finger has lifted — but hold the rig on
+      // while a scroll fling is still in flight (mobile shooting star)
       if (!state.active && state.fade > 0) {
-        state.fade = Math.max(0, state.fade - dt)
+        if (state.boost > 0.04) state.fade = 0.7
+        else state.fade = Math.max(0, state.fade - dt)
       }
       const visible = state.active || state.fade > 0
       const vis = state.active ? 1 : state.fade / 0.7
+
+      // SCROLL BOOST — same ignition as the mouse rig
+      let dv = window.scrollY - state.sy
+      state.sy = window.scrollY
+      if (Math.abs(dv) > 400) dv = 0
+      state.dvs = damp(state.dvs, dv, 10, dt)
+      const rawBoost = Math.max(0, Math.min(1, (Math.abs(state.dvs) - 2.5) / 20))
+      state.boost = damp(state.boost, rawBoost, rawBoost > state.boost ? 16 : 4.2, dt)
+      const fire = state.boost
 
       const dx = pos.x - pos.rx
       const dy = pos.y - pos.ry
@@ -473,12 +559,21 @@ export default function CustomCursor() {
         plate.current.style.opacity = state.pop.toFixed(3)
       }
 
-      // comet tail follows the fingertip
+      // comet tail follows the fingertip (+ fire streak while scrolling)
       if (visible) {
-        tail?.push(pos.x, pos.y, v, now)
+        const off = Math.max(-110, Math.min(110, -state.dvs * 3.4))
+        if (fire > 0.05 && Math.abs(off) > 3)
+          tail?.push(pos.x, pos.y + off, Math.abs(state.dvs) * 1.7, now, Math.max(0.85, fire))
+        tail?.push(pos.x, pos.y, v, now, fire)
         tail?.draw(now, dt, vis)
       } else {
         tail?.draw(now, dt, 0)
+      }
+
+      // hot halo — the star itself ignites while burning
+      if (halo.current) {
+        halo.current.style.opacity = (fire * 0.95 * vis).toFixed(3)
+        halo.current.style.transform = `translate(-50%,-50%) scale(${(0.7 + fire * 0.75).toFixed(3)})`
       }
 
       // release the revealed label once the rig has dissolved
@@ -545,6 +640,7 @@ export default function CustomCursor() {
         style={{ opacity: 0 }}
         aria-hidden="true"
       >
+        <div ref={halo} className="cursor-star-halo" style={{ opacity: 0 }} aria-hidden="true" />
         <div className="cursor-star-spin">
           <svg className="cursor-star-svg" width="21" height="21" viewBox="0 0 24 24" fill="none">
             <defs>

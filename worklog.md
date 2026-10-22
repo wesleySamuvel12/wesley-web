@@ -228,3 +228,23 @@ Work Log:
 Stage Summary:
 - The cursor is now a glowing star dragging a glowing comet tail (with speed-shed sparkles and click fireworks), identical language on mouse and touch
 - Tuning surfaces: createTail LIFE/alphas/tailColor ramp, star size/spin/twinkle in globals.css, burst count, spark spawn rate (speed * 0.032)
+
+---
+Task ID: 18
+Agent: main (Z.ai Code)
+Task: "cursor tail colour must differ while scrolling it must like a shooting star"
+
+Work Log:
+- SCROLL BOOST signal: both cursor rigs (mouse + touch) track window.scrollY per frame; delta is smoothed (damp λ=10) into a boost value with fast attack (λ=16) and slow cool-down (λ=4.2) so ignition is instant and the fire lingers briefly after the scroll settles; teleport guard ignores single-frame jumps > 400px (instant scene jumps never false-ignite)
+- Fire palette: new fireColor ramp (k=1 white-hot → gold #ffd166 → amber #ff8a3c → ember red #e2452f) blended per segment against the resting lime/cyan comet ramp via mix3(tailColor, fireColor, boost); each tail point freezes the boost it was born with, so old segments keep their fire as they age
+- Burning streak physics: boosted points live 0.8s → 1.3s (longer ribbon), stroke widths ×(1+0.5b), alphas ×(1.4-1.45), points cap 44 → 64; while scrolling a vertical SHOOTING TRAIL spawns opposite the scroll gesture (offset = clamp(-smoothedDelta*3.4, ±110px)) so the stationary cursor star reads as a meteor tearing along the scroll direction
+- Ember sparks: spawn rate rises with boost, palette switches to gold/orange/white-hot embers when b>0.45, ember lifetime slightly longer
+- Hot halo: new .cursor-star-halo (54px gold→orange radial, screen blend) behind the star; opacity/scale JS-driven by boost (0.7→1.45 scale) so the star visibly ignites
+- Mobile fling: touch rig holds its fade countdown while boost>0.04, so the shooting star survives the whole fling scroll after the finger lifts (pointercancel no longer dissolves it mid-scroll)
+- Verified via agent-browser pixel probes on the tail canvas — REST sweep: lime 2899 / cyan 74 / FIRE 0; WHEEL BURST: fire 152 / lime 0 / cyan 0 + halo 0.944 (desktop screenshot r18_scroll_fire.png shows the white-hot vertical meteor + gold halo ball); post-settle sweep: lime 162 / fire 0 (cools back cleanly); MOBILE touch scroll: fire 1072 / lime 16 / cyan 17 + halo 0.853, screenshot r18_mobile_fire.png shows a full-screen white-hot meteor with gold ember trail over the red-gradient magnified letters
+- Final gates: ESLint clean, tsc --noEmit 0 errors, dev.log 200s only, zero page errors
+
+Stage Summary:
+- The cursor now has two states: a lime/cyan comet at rest, and a FIRE SHOOTING STAR while the page scrolls — white-hot head, gold→amber→ember tail, vertical streak along the scroll gesture, ember sparks, hot halo; it cools back to the comet automatically
+- Works identically on mouse and touch (mobile fling scrolls keep the star burning)
+- Tuning surfaces: boost thresholds ((|dvs|-2.5)/20), attack/cool λ, fireColor ramp stops, trail offset gain (-dvs*3.4, clamp ±110), LIFE_HOT 1.3s, halo gradient
