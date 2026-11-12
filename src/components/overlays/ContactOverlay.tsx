@@ -29,8 +29,11 @@ export default function ContactOverlay() {
           lab is open — let&apos;s put something on the bench.
         </p>
         <div data-reveal className="pointer-events-auto mt-8 flex flex-wrap items-center gap-3.5">
-          <MagneticButton variant="primary" href={`mailto:${CONTACT.email}`} cursorLabel="OPEN">
+          <MagneticButton variant="primary" href={`mailto:${CONTACT.email}`} cursorLabel="EMAIL">
             CONTACT ME
+          </MagneticButton>
+          <MagneticButton href={`tel:${CONTACT.phoneRaw}`} cursorLabel="CALL">
+            CALL: {CONTACT.phone}
           </MagneticButton>
           <MagneticButton href={CONTACT.github} external cursorLabel="OPEN">
             GITHUB ↗
@@ -74,6 +77,13 @@ export default function ContactOverlay() {
                 className="hidden font-mono text-[8px] tracking-[0.3em] text-white/40 transition-colors duration-300 hover:text-[#bef264] sm:inline"
               >
                 {CONTACT.email.toUpperCase()}
+              </a>
+              <a
+                href={`tel:${CONTACT.phoneRaw}`}
+                data-cursor="call"
+                className="hidden font-mono text-[8px] tracking-[0.3em] text-white/40 transition-colors duration-300 hover:text-[#bef264] sm:inline"
+              >
+                +91 {CONTACT.phone}
               </a>
             </nav>
             <div className="flex items-center gap-4">

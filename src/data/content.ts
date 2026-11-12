@@ -131,7 +131,9 @@ export const CREATIVE_WORKS: CreativeWork[] = [
 ]
 
 export const CONTACT = {
-  email: 'hello@wesleysamuvel.dev', // TODO: replace with real address
-  github: 'https://github.com/', // TODO: replace with real profile
-  linkedin: 'https://www.linkedin.com/', // TODO: replace with real profile
+  email: 'wesleysamuvel7@gmail.com',
+  phone: '9942 445964',
+  phoneRaw: '+919942445964',
+  github: 'https://github.com/wesleySamuvel12',
+  linkedin: 'https://www.linkedin.com/',
 }
